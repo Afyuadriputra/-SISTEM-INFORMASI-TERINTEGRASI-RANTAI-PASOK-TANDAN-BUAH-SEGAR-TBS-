@@ -1,0 +1,141 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Kontrak aktif, kontrak kedaluwarsa, kuota cukup vs tidak cukup (BSD §12.4), serta kontrak UNCONFIRMED & PRINCIPAL/AGENT simulasi."
+  },
+  "trade_contracts": [
+    {
+      "id": "60000000-0000-4000-8000-000000000001",
+      "contract_number": "KTR-AGRO-2026-001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "mill_name": "PKS Pangkalan Kerinci",
+      "start_date": "2026-10-01",
+      "end_date": "2026-12-31",
+      "price_rule_type": "FIXED",
+      "agreed_price_per_kg": "2850.00",
+      "business_model_code": "PRINCIPAL",
+      "perumda_role": "SELLER",
+      "seller_party_id": "10000000-0000-4000-8000-000000000100",
+      "buyer_party_id": "10000000-0000-4000-8000-000000000120",
+      "agent_party_id": null,
+      "represented_party_id": null,
+      "business_model_rule_version": "90000000-0000-4000-8000-000000000002",
+      "payment_terms": "14 hari kerja setelah tiket diverifikasi dan rekonsiliasi MATCHED (Simulasi)",
+      "status": "ACTIVE",
+      "policy_classification": "SIMULATION_ONLY",
+      "quota_periods": [
+        {
+          "id": "60000000-0000-4000-8000-000000000101",
+          "period_start": "2026-11-01",
+          "period_end": "2026-11-30",
+          "quota_limit_kg": "100000.000",
+          "consumed_weight_kg": "60000.000",
+          "active_reserved_kg": "15000.000",
+          "available_quota_kg": "25000.000",
+          "status": "ACTIVE"
+        }
+      ],
+      "approved_by": "10000000-0000-4000-8000-000000000011",
+      "approved_at": "2026-10-01T02:00:00Z",
+      "created_at": "2026-10-01T01:00:00Z"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000002",
+      "contract_number": "KTR-AGRO-2026-002-EXP",
+      "mill_id": "30000000-0000-4000-8000-000000000002",
+      "mill_name": "PKS Langgam Jaya",
+      "start_date": "2026-08-01",
+      "end_date": "2026-10-31",
+      "price_rule_type": "FIXED",
+      "agreed_price_per_kg": "2800.00",
+      "business_model_code": "PRINCIPAL",
+      "perumda_role": "SELLER",
+      "seller_party_id": "10000000-0000-4000-8000-000000000100",
+      "buyer_party_id": "10000000-0000-4000-8000-000000000121",
+      "agent_party_id": null,
+      "represented_party_id": null,
+      "business_model_rule_version": "90000000-0000-4000-8000-000000000002",
+      "payment_terms": "14 hari kerja (Simulasi)",
+      "status": "ACTIVE",
+      "policy_classification": "SIMULATION_ONLY",
+      "quota_periods": [
+        {
+          "id": "60000000-0000-4000-8000-000000000102",
+          "period_start": "2026-10-01",
+          "period_end": "2026-10-31",
+          "quota_limit_kg": "50000.000",
+          "consumed_weight_kg": "40000.000",
+          "active_reserved_kg": "0.000",
+          "available_quota_kg": "10000.000",
+          "status": "CLOSED"
+        }
+      ],
+      "approved_by": "10000000-0000-4000-8000-000000000011",
+      "approved_at": "2026-08-01T02:00:00Z",
+      "created_at": "2026-08-01T01:00:00Z"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000003",
+      "contract_number": "KTR-AGRO-2026-003-UNCONF",
+      "mill_id": "30000000-0000-4000-8000-000000000002",
+      "mill_name": "PKS Langgam Jaya",
+      "start_date": "2026-11-01",
+      "end_date": "2026-12-31",
+      "price_rule_type": "REFERENCE_FORMULA",
+      "agreed_price_per_kg": null,
+      "business_model_code": "UNCONFIRMED",
+      "perumda_role": "UNCONFIRMED",
+      "seller_party_id": "10000000-0000-4000-8000-000000000110",
+      "buyer_party_id": "10000000-0000-4000-8000-000000000121",
+      "agent_party_id": null,
+      "represented_party_id": null,
+      "business_model_rule_version": "90000000-0000-4000-8000-000000000002",
+      "payment_terms": "Menunggu pengesahan SOP Principal/Agent (BSD-DEC-001).",
+      "status": "PENDING_APPROVAL",
+      "policy_classification": "PENDING_SOP",
+      "quota_periods": [
+        {
+          "id": "60000000-0000-4000-8000-000000000103",
+          "period_start": "2026-11-01",
+          "period_end": "2026-11-30",
+          "quota_limit_kg": "20000.000",
+          "consumed_weight_kg": "0.000",
+          "active_reserved_kg": "0.000",
+          "available_quota_kg": "20000.000",
+          "status": "ACTIVE"
+        }
+      ],
+      "approved_by": null,
+      "approved_at": null,
+      "created_at": "2026-11-09T02:00:00Z"
+    }
+  ],
+  "quota_reservations": [
+    {
+      "id": "60000000-0000-4000-8000-000000000501",
+      "quota_period_id": "60000000-0000-4000-8000-000000000101",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000001",
+      "reserved_weight_kg": "10000.000",
+      "consumed_weight_kg": "9900.000",
+      "status": "CONSUMED",
+      "reserved_at": "2026-11-10T02:30:00Z"
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000502",
+      "quota_period_id": "60000000-0000-4000-8000-000000000101",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000002",
+      "reserved_weight_kg": "15000.000",
+      "consumed_weight_kg": "0.000",
+      "status": "RESERVED",
+      "reserved_at": "2026-11-10T03:00:00Z"
+    }
+  ],
+  "concurrency_over_quota_test_case": {
+    "description": "Skenario BIZ-008/BIZ-009: Sisa kuota tersedia pada KTR-AGRO-2026-001 adalah 25000.000 kg; dua request paralel mengajukan masing-masing 20000.000 kg.",
+    "period_id": "60000000-0000-4000-8000-000000000101",
+    "available_quota_kg": "25000.000",
+    "request_a_weight_kg": "20000.000",
+    "request_b_weight_kg": "20000.000",
+    "expected_second_request_error_code": "CONTRACT_QUOTA_EXCEEDED"
+  }
+}
