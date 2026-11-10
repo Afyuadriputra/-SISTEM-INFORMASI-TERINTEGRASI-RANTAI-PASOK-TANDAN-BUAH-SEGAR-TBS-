@@ -1,0 +1,228 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Skenario penerimaan TBS DRAFT, VALIDATED siap kirim (multi-petani A=3000, B=2000, C=5000 = 10000 kg), ALLOCATED/SHIPPED terkunci, revisi timbang, dan grading simulasi 2%."
+  },
+  "tbs_receipts": [
+    {
+      "id": "50000000-0000-4000-8000-000000000001",
+      "receipt_number": "RCV-2026-1110-001",
+      "farmer_id": "40000000-0000-4000-8000-000000000101",
+      "farmer_name": "Hendra Wijaya",
+      "farm_id": "40000000-0000-4000-8000-000000000201",
+      "farm_name": "Kebun Swadaya Blok A Desa Makmur",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "harvest_date": "2026-11-10",
+      "received_at": "2026-11-10T01:30:00Z",
+      "status": "SHIPPED",
+      "current_weighing": {
+        "id": "50000000-0000-4000-8000-000000000101",
+        "revision_number": 1,
+        "gross_weight_kg": "4200.000",
+        "tare_weight_kg": "1200.000",
+        "net_weight_kg": "3000.000",
+        "weighed_at": "2026-11-10T01:35:00Z",
+        "weighed_by": "10000000-0000-4000-8000-000000000003",
+        "is_current": true,
+        "correction_reason": null
+      },
+      "net_weight_after_grading_kg": "2940.000",
+      "weighing_revisions": [
+        {
+          "id": "50000000-0000-4000-8000-000000000101",
+          "revision_number": 1,
+          "gross_weight_kg": "4200.000",
+          "tare_weight_kg": "1200.000",
+          "net_weight_kg": "3000.000",
+          "weighed_at": "2026-11-10T01:35:00Z",
+          "weighed_by": "10000000-0000-4000-8000-000000000003",
+          "is_current": true,
+          "correction_reason": null
+        }
+      ],
+      "grading_items": [
+        {
+          "id": "50000000-0000-4000-8000-000000000201",
+          "grading_category": "Sortasi Mutu Simulasi (Brondolan/Basah)",
+          "measurement_value": "2.0000",
+          "deduction_type": "WEIGHT_PERCENT",
+          "deduction_value": "2.0000",
+          "deduction_weight_kg": "60.000",
+          "deduction_amount": null,
+          "calculation_basis": "NET_WEIGHT_BEFORE_GRADING",
+          "is_simulation": true,
+          "notes": "Simulasi potongan mutu 2% terpisah dari berat netto (BSD §9.3)."
+        }
+      ],
+      "version": 3,
+      "created_at": "2026-11-10T01:30:00Z",
+      "updated_at": "2026-11-10T03:00:00Z"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000002",
+      "receipt_number": "RCV-2026-1110-002",
+      "farmer_id": "40000000-0000-4000-8000-000000000102",
+      "farmer_name": "Siti Aminah",
+      "farm_id": "40000000-0000-4000-8000-000000000202",
+      "farm_name": "Kebun Swadaya Sungai Kijang",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "harvest_date": "2026-11-10",
+      "received_at": "2026-11-10T01:40:00Z",
+      "status": "SHIPPED",
+      "current_weighing": {
+        "id": "50000000-0000-4000-8000-000000000102",
+        "revision_number": 1,
+        "gross_weight_kg": "3200.000",
+        "tare_weight_kg": "1200.000",
+        "net_weight_kg": "2000.000",
+        "weighed_at": "2026-11-10T01:45:00Z",
+        "weighed_by": "10000000-0000-4000-8000-000000000003",
+        "is_current": true,
+        "correction_reason": null
+      },
+      "net_weight_after_grading_kg": "2000.000",
+      "weighing_revisions": [
+        {
+          "id": "50000000-0000-4000-8000-000000000102",
+          "revision_number": 1,
+          "gross_weight_kg": "3200.000",
+          "tare_weight_kg": "1200.000",
+          "net_weight_kg": "2000.000",
+          "weighed_at": "2026-11-10T01:45:00Z",
+          "weighed_by": "10000000-0000-4000-8000-000000000003",
+          "is_current": true,
+          "correction_reason": null
+        }
+      ],
+      "grading_items": [],
+      "version": 3,
+      "created_at": "2026-11-10T01:40:00Z",
+      "updated_at": "2026-11-10T03:00:00Z"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000003",
+      "receipt_number": "RCV-2026-1110-003",
+      "farmer_id": "40000000-0000-4000-8000-000000000103",
+      "farmer_name": "Budi Santoso",
+      "farm_id": "40000000-0000-4000-8000-000000000203",
+      "farm_name": "Kebun Swadaya Rantau Baru",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "harvest_date": "2026-11-10",
+      "received_at": "2026-11-10T01:50:00Z",
+      "status": "SHIPPED",
+      "current_weighing": {
+        "id": "50000000-0000-4000-8000-000000000103",
+        "revision_number": 1,
+        "gross_weight_kg": "6800.000",
+        "tare_weight_kg": "1800.000",
+        "net_weight_kg": "5000.000",
+        "weighed_at": "2026-11-10T01:55:00Z",
+        "weighed_by": "10000000-0000-4000-8000-000000000003",
+        "is_current": true,
+        "correction_reason": null
+      },
+      "net_weight_after_grading_kg": "5000.000",
+      "weighing_revisions": [
+        {
+          "id": "50000000-0000-4000-8000-000000000103",
+          "revision_number": 1,
+          "gross_weight_kg": "6800.000",
+          "tare_weight_kg": "1800.000",
+          "net_weight_kg": "5000.000",
+          "weighed_at": "2026-11-10T01:55:00Z",
+          "weighed_by": "10000000-0000-4000-8000-000000000003",
+          "is_current": true,
+          "correction_reason": null
+        }
+      ],
+      "grading_items": [],
+      "version": 3,
+      "created_at": "2026-11-10T01:50:00Z",
+      "updated_at": "2026-11-10T03:00:00Z"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000004",
+      "receipt_number": "RCV-2026-1110-004",
+      "farmer_id": "40000000-0000-4000-8000-000000000101",
+      "farmer_name": "Hendra Wijaya",
+      "farm_id": "40000000-0000-4000-8000-000000000201",
+      "farm_name": "Kebun Swadaya Blok A Desa Makmur",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "harvest_date": "2026-11-10",
+      "received_at": "2026-11-10T03:10:00Z",
+      "status": "VALIDATED",
+      "current_weighing": {
+        "id": "50000000-0000-4000-8000-000000000104",
+        "revision_number": 2,
+        "gross_weight_kg": "8500.000",
+        "tare_weight_kg": "3200.000",
+        "net_weight_kg": "5300.000",
+        "weighed_at": "2026-11-10T03:20:00Z",
+        "weighed_by": "10000000-0000-4000-8000-000000000003",
+        "is_current": true,
+        "correction_reason": "Koreksi angka tara truk setelah kalibrasi ramp."
+      },
+      "net_weight_after_grading_kg": "5194.000",
+      "weighing_revisions": [
+        {
+          "id": "50000000-0000-4000-8000-000000000199",
+          "revision_number": 1,
+          "gross_weight_kg": "8500.000",
+          "tare_weight_kg": "3400.000",
+          "net_weight_kg": "5100.000",
+          "weighed_at": "2026-11-10T03:12:00Z",
+          "weighed_by": "10000000-0000-4000-8000-000000000003",
+          "is_current": false,
+          "correction_reason": null
+        },
+        {
+          "id": "50000000-0000-4000-8000-000000000104",
+          "revision_number": 2,
+          "gross_weight_kg": "8500.000",
+          "tare_weight_kg": "3200.000",
+          "net_weight_kg": "5300.000",
+          "weighed_at": "2026-11-10T03:20:00Z",
+          "weighed_by": "10000000-0000-4000-8000-000000000003",
+          "is_current": true,
+          "correction_reason": "Koreksi angka tara truk setelah kalibrasi ramp."
+        }
+      ],
+      "grading_items": [
+        {
+          "id": "50000000-0000-4000-8000-000000000202",
+          "grading_category": "Sortasi Buah Mentah Simulasi",
+          "measurement_value": "2.0000",
+          "deduction_type": "WEIGHT_PERCENT",
+          "deduction_value": "2.0000",
+          "deduction_weight_kg": "106.000",
+          "deduction_amount": null,
+          "calculation_basis": "NET_WEIGHT_BEFORE_GRADING",
+          "is_simulation": true,
+          "notes": "Sesuai contoh simulasi BSD §9.3."
+        }
+      ],
+      "version": 2,
+      "created_at": "2026-11-10T03:10:00Z",
+      "updated_at": "2026-11-10T03:25:00Z"
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000005",
+      "receipt_number": "RCV-2026-1110-005",
+      "farmer_id": "40000000-0000-4000-8000-000000000102",
+      "farmer_name": "Siti Aminah",
+      "farm_id": "40000000-0000-4000-8000-000000000202",
+      "farm_name": "Kebun Swadaya Sungai Kijang",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "harvest_date": "2026-11-10",
+      "received_at": "2026-11-10T04:00:00Z",
+      "status": "DRAFT",
+      "current_weighing": null,
+      "net_weight_after_grading_kg": null,
+      "weighing_revisions": [],
+      "grading_items": [],
+      "version": 1,
+      "created_at": "2026-11-10T04:00:00Z",
+      "updated_at": "2026-11-10T04:00:00Z"
+    }
+  ]
+}
