@@ -1,0 +1,178 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Skenario e-DO multi-petani (A=3000, B=2000, C=5000 -> total 10000.000 kg), e-DO IN_TRANSIT, dan draft e-DO."
+  },
+  "delivery_orders": [
+    {
+      "id": "70000000-0000-4000-8000-000000000001",
+      "delivery_order_number": "EDO-2026-1110-042",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "mill_name": "PKS Pangkalan Kerinci",
+      "contract_id": "60000000-0000-4000-8000-000000000001",
+      "vehicle_id": "40000000-0000-4000-8000-000000000301",
+      "vehicle_plate": "BM 9042 TS",
+      "driver_id": "40000000-0000-4000-8000-000000000401",
+      "driver_name": "Rahmat Hidayat (Sopir Simulasi)",
+      "total_origin_weight_kg": "10000.000",
+      "status": "RECEIVED",
+      "gps_tracking_supported": false,
+      "qr_verification_token": "EDO-042-9F8A-PKC",
+      "lines": [
+        {
+          "id": "70000000-0000-4000-8000-000000000101",
+          "receipt_id": "50000000-0000-4000-8000-000000000001",
+          "receipt_number": "RCV-2026-1110-001",
+          "farmer_id": "40000000-0000-4000-8000-000000000101",
+          "farmer_name": "Hendra Wijaya",
+          "origin_weight_snapshot_kg": "3000.000",
+          "allocation_status": "ACTIVE"
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000102",
+          "receipt_id": "50000000-0000-4000-8000-000000000002",
+          "receipt_number": "RCV-2026-1110-002",
+          "farmer_id": "40000000-0000-4000-8000-000000000102",
+          "farmer_name": "Siti Aminah",
+          "origin_weight_snapshot_kg": "2000.000",
+          "allocation_status": "ACTIVE"
+        },
+        {
+          "id": "70000000-0000-4000-8000-000000000103",
+          "receipt_id": "50000000-0000-4000-8000-000000000003",
+          "receipt_number": "RCV-2026-1110-003",
+          "farmer_id": "40000000-0000-4000-8000-000000000103",
+          "farmer_name": "Budi Santoso",
+          "origin_weight_snapshot_kg": "5000.000",
+          "allocation_status": "ACTIVE"
+        }
+      ],
+      "status_events": [
+        { "id": "70000000-0000-4000-8000-000000000201", "previous_status": null, "new_status": "DRAFT", "actor_id": "10000000-0000-4000-8000-000000000003", "event_time": "2026-11-10T02:20:00Z", "reason": null },
+        { "id": "70000000-0000-4000-8000-000000000202", "previous_status": "DRAFT", "new_status": "READY", "actor_id": "10000000-0000-4000-8000-000000000003", "event_time": "2026-11-10T02:30:00Z", "reason": "Penerbitan e-DO multi-petani." },
+        { "id": "70000000-0000-4000-8000-000000000203", "previous_status": "READY", "new_status": "IN_TRANSIT", "actor_id": "10000000-0000-4000-8000-000000000003", "event_time": "2026-11-10T02:45:00Z", "reason": null },
+        { "id": "70000000-0000-4000-8000-000000000204", "previous_status": "IN_TRANSIT", "new_status": "ARRIVED", "actor_id": "10000000-0000-4000-8000-000000000009", "event_time": "2026-11-10T03:30:00Z", "reason": "Verifikasi QR di gerbang PKS." },
+        { "id": "70000000-0000-4000-8000-000000000205", "previous_status": "ARRIVED", "new_status": "RECEIVED", "actor_id": "10000000-0000-4000-8000-000000000009", "event_time": "2026-11-10T03:50:00Z", "reason": "Tiket timbang terverifikasi." }
+      ],
+      "issued_at": "2026-11-10T02:30:00Z",
+      "departed_at": "2026-11-10T02:45:00Z",
+      "arrived_at": "2026-11-10T03:30:00Z",
+      "completed_at": null,
+      "version": 5,
+      "created_at": "2026-11-10T02:20:00Z"
+    },
+    {
+      "id": "70000000-0000-4000-8000-000000000002",
+      "delivery_order_number": "EDO-2026-1110-043",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "mill_name": "PKS Pangkalan Kerinci",
+      "contract_id": "60000000-0000-4000-8000-000000000001",
+      "vehicle_id": "40000000-0000-4000-8000-000000000302",
+      "vehicle_plate": "BM 9108 AG",
+      "driver_id": "40000000-0000-4000-8000-000000000401",
+      "driver_name": "Rahmat Hidayat (Sopir Simulasi)",
+      "total_origin_weight_kg": "10000.000",
+      "status": "IN_TRANSIT",
+      "gps_tracking_supported": false,
+      "qr_verification_token": "EDO-043-7C1D-PKC",
+      "lines": [],
+      "status_events": [
+        { "id": "70000000-0000-4000-8000-000000000210", "previous_status": "READY", "new_status": "IN_TRANSIT", "actor_id": "10000000-0000-4000-8000-000000000003", "event_time": "2026-11-10T04:00:00Z", "reason": null }
+      ],
+      "issued_at": "2026-11-10T03:45:00Z",
+      "departed_at": "2026-11-10T04:00:00Z",
+      "arrived_at": null,
+      "completed_at": null,
+      "version": 3,
+      "created_at": "2026-11-10T03:30:00Z"
+    },
+    {
+      "id": "70000000-0000-4000-8000-000000000003",
+      "delivery_order_number": "EDO-2026-1110-044-DRAFT",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "mill_name": "PKS Pangkalan Kerinci",
+      "contract_id": "60000000-0000-4000-8000-000000000001",
+      "vehicle_id": "40000000-0000-4000-8000-000000000301",
+      "vehicle_plate": "BM 9042 TS",
+      "driver_id": "40000000-0000-4000-8000-000000000401",
+      "driver_name": "Rahmat Hidayat (Sopir Simulasi)",
+      "total_origin_weight_kg": "5300.000",
+      "status": "DRAFT",
+      "gps_tracking_supported": false,
+      "qr_verification_token": null,
+      "lines": [
+        {
+          "id": "70000000-0000-4000-8000-000000000110",
+          "receipt_id": "50000000-0000-4000-8000-000000000004",
+          "receipt_number": "RCV-2026-1110-004",
+          "farmer_id": "40000000-0000-4000-8000-000000000101",
+          "farmer_name": "Hendra Wijaya",
+          "origin_weight_snapshot_kg": "5300.000",
+          "allocation_status": "ACTIVE"
+        }
+      ],
+      "status_events": [],
+      "issued_at": null,
+      "departed_at": null,
+      "arrived_at": null,
+      "completed_at": null,
+      "version": 1,
+      "created_at": "2026-11-10T04:20:00Z"
+    },
+    {
+      "id": "70000000-0000-4000-8000-000000000098",
+      "delivery_order_number": "EDO-2026-1109-039",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "mill_name": "PKS Pangkalan Kerinci",
+      "contract_id": "60000000-0000-4000-8000-000000000001",
+      "vehicle_id": "40000000-0000-4000-8000-000000000301",
+      "vehicle_plate": "BM 9042 TS",
+      "driver_id": "40000000-0000-4000-8000-000000000401",
+      "driver_name": "Rahmat Hidayat (Sopir Simulasi)",
+      "total_origin_weight_kg": "10000.000",
+      "status": "RECEIVED",
+      "gps_tracking_supported": false,
+      "qr_verification_token": "EDO-039-HIST-PKC",
+      "lines": [],
+      "status_events": [
+        { "id": "70000000-0000-4000-8000-000000000298", "previous_status": "ARRIVED", "new_status": "RECEIVED", "actor_id": "10000000-0000-4000-8000-000000000009", "event_time": "2026-11-09T08:00:00Z", "reason": null }
+      ],
+      "issued_at": "2026-11-09T06:00:00Z",
+      "departed_at": "2026-11-09T06:30:00Z",
+      "arrived_at": "2026-11-09T07:50:00Z",
+      "completed_at": null,
+      "version": 4,
+      "created_at": "2026-11-09T05:45:00Z"
+    },
+    {
+      "id": "70000000-0000-4000-8000-000000000099",
+      "delivery_order_number": "EDO-2026-1109-040",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "mill_name": "PKS Pangkalan Kerinci",
+      "contract_id": "60000000-0000-4000-8000-000000000001",
+      "vehicle_id": "40000000-0000-4000-8000-000000000302",
+      "vehicle_plate": "BM 9108 AG",
+      "driver_id": "40000000-0000-4000-8000-000000000401",
+      "driver_name": "Rahmat Hidayat (Sopir Simulasi)",
+      "total_origin_weight_kg": "10000.000",
+      "status": "RECEIVED",
+      "gps_tracking_supported": false,
+      "qr_verification_token": "EDO-040-HIST-PKC",
+      "lines": [],
+      "status_events": [
+        { "id": "70000000-0000-4000-8000-000000000299", "previous_status": "ARRIVED", "new_status": "RECEIVED", "actor_id": "10000000-0000-4000-8000-000000000009", "event_time": "2026-11-09T10:00:00Z", "reason": null }
+      ],
+      "issued_at": "2026-11-09T09:00:00Z",
+      "departed_at": "2026-11-09T09:15:00Z",
+      "arrived_at": "2026-11-09T09:50:00Z",
+      "completed_at": null,
+      "version": 4,
+      "created_at": "2026-11-09T08:45:00Z"
+    }
+  ]
+}
