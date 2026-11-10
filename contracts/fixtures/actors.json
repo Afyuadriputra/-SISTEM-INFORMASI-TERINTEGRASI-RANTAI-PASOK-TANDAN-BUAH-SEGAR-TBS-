@@ -1,0 +1,642 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Identitas aktor non-produksi untuk pytest dan MSW. Zero plaintext real credentials."
+  },
+  "public_visitor": {
+    "actor_code": "PUBLIC",
+    "prd_code": "ROLE-01",
+    "actor_type": "anonymous",
+    "database_account": false,
+    "session_active": false,
+    "permissions": [
+      "public.prices.read",
+      "public.mills.read",
+      "public.profile.read"
+    ]
+  },
+  "authenticated_users": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "username": "sim_petani_01",
+      "email": "petani01.sim@example.invalid",
+      "display_name": "Hendra Wijaya (Petani Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000101",
+      "status": "ACTIVE",
+      "roles": [
+        "FARMER"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000201",
+          "scope_type": "FARMER",
+          "farmer_id": "40000000-0000-4000-8000-000000000101",
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "farmers.read",
+        "farms.read",
+        "prices.read",
+        "receipts.read",
+        "delivery_orders.read",
+        "payments.read",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:00:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "username": "sim_petani_02",
+      "email": "petani02.sim@example.invalid",
+      "display_name": "Siti Aminah (Petani Simulasi B)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000102",
+      "status": "ACTIVE",
+      "roles": [
+        "FARMER"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000202",
+          "scope_type": "FARMER",
+          "farmer_id": "40000000-0000-4000-8000-000000000102",
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "farmers.read",
+        "farms.read",
+        "prices.read",
+        "receipts.read",
+        "delivery_orders.read",
+        "payments.read",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:05:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "username": "sim_kop_op_01",
+      "email": "kop01.sim@example.invalid",
+      "display_name": "Operator Koperasi Sejahtera (Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000110",
+      "status": "ACTIVE",
+      "roles": [
+        "COOPERATIVE_OPERATOR"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000203",
+          "scope_type": "COOPERATIVE",
+          "farmer_id": null,
+          "cooperative_id": "40000000-0000-4000-8000-000000000001",
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "farmers.read",
+        "farmers.write",
+        "farms.read",
+        "farms.write",
+        "cooperatives.read",
+        "mills.read",
+        "vehicles.read",
+        "vehicles.write",
+        "drivers.read",
+        "drivers.write",
+        "prices.read",
+        "receipts.read",
+        "receipts.create",
+        "receipts.weigh",
+        "receipts.validate",
+        "receipts.cancel",
+        "delivery_orders.read",
+        "delivery_orders.create",
+        "delivery_orders.issue",
+        "delivery_orders.transition",
+        "delivery_orders.cancel",
+        "mill_tickets.read",
+        "reconciliations.read",
+        "payments.read",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:10:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000004",
+      "username": "sim_kop_op_02",
+      "email": "kop02.sim@example.invalid",
+      "display_name": "Operator Koperasi Makmur Jaya (Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000111",
+      "status": "ACTIVE",
+      "roles": [
+        "COOPERATIVE_OPERATOR"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000204",
+          "scope_type": "COOPERATIVE",
+          "farmer_id": null,
+          "cooperative_id": "40000000-0000-4000-8000-000000000002",
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "farmers.read",
+        "farmers.write",
+        "farms.read",
+        "farms.write",
+        "cooperatives.read",
+        "mills.read",
+        "vehicles.read",
+        "vehicles.write",
+        "drivers.read",
+        "drivers.write",
+        "prices.read",
+        "receipts.read",
+        "receipts.create",
+        "receipts.weigh",
+        "receipts.validate",
+        "receipts.cancel",
+        "delivery_orders.read",
+        "delivery_orders.create",
+        "delivery_orders.issue",
+        "delivery_orders.transition",
+        "delivery_orders.cancel",
+        "mill_tickets.read",
+        "reconciliations.read",
+        "payments.read",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:12:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000005",
+      "username": "sim_perumda_ops_01",
+      "email": "ops01.sim@example.invalid",
+      "display_name": "Staf Operasional Perumda 01 (Maker Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000100",
+      "status": "ACTIVE",
+      "roles": [
+        "PERUMDA_OPERATIONS"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000205",
+          "scope_type": "PERUMDA_GLOBAL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "farmers.read",
+        "farmers.write",
+        "farms.read",
+        "farms.write",
+        "cooperatives.read",
+        "mills.read",
+        "mills.write",
+        "vehicles.read",
+        "vehicles.write",
+        "drivers.read",
+        "drivers.write",
+        "prices.read",
+        "prices.create",
+        "prices.submit",
+        "prices.verify",
+        "prices.publish",
+        "prices.revoke",
+        "receipts.read",
+        "contracts.read",
+        "contracts.write",
+        "quotas.reserve",
+        "quotas.consume",
+        "quotas.release",
+        "delivery_orders.read",
+        "delivery_orders.create",
+        "delivery_orders.issue",
+        "delivery_orders.transition",
+        "delivery_orders.cancel",
+        "mill_tickets.read",
+        "reconciliations.read",
+        "reconciliations.calculate",
+        "reconciliations.review",
+        "reconciliations.resolve",
+        "allocations.compute",
+        "invoices.read",
+        "files.upload",
+        "files.read",
+        "admin.rules.read",
+        "admin.rules.write",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:15:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000006",
+      "username": "sim_perumda_ops_02",
+      "email": "ops02.sim@example.invalid",
+      "display_name": "Verifikator Harga & Ops Perumda 02 (Checker Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000100",
+      "status": "ACTIVE",
+      "roles": [
+        "PERUMDA_OPERATIONS"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000206",
+          "scope_type": "PERUMDA_GLOBAL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "farmers.read",
+        "farmers.write",
+        "farms.read",
+        "farms.write",
+        "cooperatives.read",
+        "mills.read",
+        "mills.write",
+        "vehicles.read",
+        "vehicles.write",
+        "drivers.read",
+        "drivers.write",
+        "prices.read",
+        "prices.create",
+        "prices.submit",
+        "prices.verify",
+        "prices.publish",
+        "prices.revoke",
+        "receipts.read",
+        "contracts.read",
+        "contracts.write",
+        "quotas.reserve",
+        "quotas.consume",
+        "quotas.release",
+        "delivery_orders.read",
+        "delivery_orders.create",
+        "delivery_orders.issue",
+        "delivery_orders.transition",
+        "delivery_orders.cancel",
+        "mill_tickets.read",
+        "reconciliations.read",
+        "reconciliations.calculate",
+        "reconciliations.review",
+        "reconciliations.resolve",
+        "allocations.compute",
+        "invoices.read",
+        "files.upload",
+        "files.read",
+        "admin.rules.read",
+        "admin.rules.write",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:20:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000007",
+      "username": "sim_perumda_fin_01",
+      "email": "fin01.sim@example.invalid",
+      "display_name": "Staf Keuangan Perumda 01 (Maker Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000100",
+      "status": "ACTIVE",
+      "roles": [
+        "PERUMDA_FINANCE"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000207",
+          "scope_type": "PERUMDA_GLOBAL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "cooperatives.read",
+        "mills.read",
+        "prices.read",
+        "receipts.read",
+        "contracts.read",
+        "delivery_orders.read",
+        "mill_tickets.read",
+        "reconciliations.read",
+        "allocations.compute",
+        "invoices.read",
+        "invoices.create",
+        "invoices.verify",
+        "invoices.issue",
+        "payments.read",
+        "payments.record",
+        "payments.verify",
+        "files.upload",
+        "files.read",
+        "reports.operational.read",
+        "reports.finance.read"
+      ],
+      "last_login_at": "2026-11-10T01:22:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000008",
+      "username": "sim_perumda_fin_02",
+      "email": "fin02.sim@example.invalid",
+      "display_name": "Verifikator Keuangan Perumda 02 (Checker Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000100",
+      "status": "ACTIVE",
+      "roles": [
+        "PERUMDA_FINANCE"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000208",
+          "scope_type": "PERUMDA_GLOBAL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "cooperatives.read",
+        "mills.read",
+        "prices.read",
+        "receipts.read",
+        "contracts.read",
+        "delivery_orders.read",
+        "mill_tickets.read",
+        "reconciliations.read",
+        "allocations.compute",
+        "invoices.read",
+        "invoices.create",
+        "invoices.verify",
+        "invoices.issue",
+        "payments.read",
+        "payments.record",
+        "payments.verify",
+        "files.upload",
+        "files.read",
+        "reports.operational.read",
+        "reports.finance.read"
+      ],
+      "last_login_at": "2026-11-10T01:25:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000009",
+      "username": "sim_mill_op_01",
+      "email": "mill01.sim@example.invalid",
+      "display_name": "Petugas Timbang PKS Kerinci (Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000120",
+      "status": "ACTIVE",
+      "roles": [
+        "MILL_OPERATOR"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000209",
+          "scope_type": "MILL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": "30000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "mills.read",
+        "vehicles.read",
+        "delivery_orders.read",
+        "delivery_orders.verify_arrival",
+        "mill_tickets.read",
+        "mill_tickets.create",
+        "mill_tickets.verify",
+        "files.upload",
+        "files.read",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:30:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000010",
+      "username": "sim_mill_op_02",
+      "email": "mill02.sim@example.invalid",
+      "display_name": "Petugas Timbang PKS Langgam (Scope Lain Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000121",
+      "status": "ACTIVE",
+      "roles": [
+        "MILL_OPERATOR"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000210",
+          "scope_type": "MILL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": "30000000-0000-4000-8000-000000000002"
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "mills.read",
+        "vehicles.read",
+        "delivery_orders.read",
+        "delivery_orders.verify_arrival",
+        "mill_tickets.read",
+        "mill_tickets.create",
+        "mill_tickets.verify",
+        "files.upload",
+        "files.read",
+        "reports.operational.read"
+      ],
+      "last_login_at": "2026-11-10T01:32:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000011",
+      "username": "sim_director_01",
+      "email": "direksi.sim@example.invalid",
+      "display_name": "Direksi Unit Agro Niaga (Simulasi)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000100",
+      "status": "ACTIVE",
+      "roles": [
+        "DIRECTOR"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000211",
+          "scope_type": "PERUMDA_GLOBAL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "public.prices.read",
+        "public.mills.read",
+        "public.profile.read",
+        "auth.session.read",
+        "farmers.read",
+        "farms.read",
+        "cooperatives.read",
+        "mills.read",
+        "prices.read",
+        "prices.verify",
+        "receipts.read",
+        "contracts.read",
+        "contracts.approve",
+        "delivery_orders.read",
+        "mill_tickets.read",
+        "reconciliations.read",
+        "reconciliations.resolve",
+        "invoices.read",
+        "invoices.verify",
+        "payments.read",
+        "payments.approve",
+        "files.read",
+        "admin.rules.read",
+        "admin.rules.write",
+        "admin.audit.read",
+        "reports.operational.read",
+        "reports.finance.read"
+      ],
+      "last_login_at": "2026-11-10T01:35:00Z",
+      "non_approver_admin": false
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000012",
+      "username": "sim_sys_admin_01",
+      "email": "sysadmin.sim@example.invalid",
+      "display_name": "Administrator Teknis (Non-Approver BR-SYS-002)",
+      "linked_party_id": "10000000-0000-4000-8000-000000000100",
+      "status": "ACTIVE",
+      "roles": [
+        "SYSTEM_ADMIN"
+      ],
+      "access_scopes": [
+        {
+          "id": "10000000-0000-4000-8000-000000000212",
+          "scope_type": "PERUMDA_GLOBAL",
+          "farmer_id": null,
+          "cooperative_id": null,
+          "mill_id": null
+        }
+      ],
+      "permissions": [
+        "auth.session.read",
+        "admin.users.read",
+        "admin.users.write",
+        "admin.rules.read",
+        "admin.rules.write",
+        "admin.audit.read",
+        "admin.health.read"
+      ],
+      "last_login_at": "2026-11-10T01:40:00Z",
+      "non_approver_admin": true
+    }
+  ],
+  "parties": [
+    {
+      "id": "10000000-0000-4000-8000-000000000100",
+      "party_type": "PERUMDA",
+      "display_name": "Perumda Tuah Sekata — Unit Agro Niaga",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000101",
+      "party_type": "FARMER",
+      "display_name": "Hendra Wijaya",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000102",
+      "party_type": "FARMER",
+      "display_name": "Siti Aminah",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000103",
+      "party_type": "FARMER",
+      "display_name": "Budi Santoso",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000104",
+      "party_type": "FARMER",
+      "display_name": "Darman (Nonaktif)",
+      "status": "INACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000110",
+      "party_type": "COOPERATIVE",
+      "display_name": "KUD Sawit Sejahtera Pelalawan",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000111",
+      "party_type": "COOPERATIVE",
+      "display_name": "KUD Makmur Jaya Ukui",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000120",
+      "party_type": "MILL_COMPANY",
+      "display_name": "PT Sawit Utama Pelalawan",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000121",
+      "party_type": "MILL_COMPANY",
+      "display_name": "PT Langgam Agro Makmur",
+      "status": "ACTIVE"
+    }
+  ]
+}
