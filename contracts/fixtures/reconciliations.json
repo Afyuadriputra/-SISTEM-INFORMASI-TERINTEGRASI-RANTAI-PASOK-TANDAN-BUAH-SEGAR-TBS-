@@ -1,0 +1,206 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Seluruh angka toleransi (1,5000%) dan alokasi proporsional (30/20/50%) adalah SIMULATION_ONLY / PENDING_SOP (BR-REC-003, BSD §20.7)."
+  },
+  "system_rule_versions": [
+    {
+      "id": "90000000-0000-4000-8000-000000000001",
+      "rule_code": "RECONCILIATION_WEIGHT_TOLERANCE",
+      "version_number": 1,
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_until": null,
+      "rule_config": {
+        "max_shrinkage_percent": "1.5000",
+        "negative_difference_triggers_hold": true,
+        "simulation_label": "Aturan Simulasi (Toleransi 1,5% — Pending Validasi SOP Perumda)"
+      },
+      "approval_status": "APPROVED",
+      "policy_classification": "SIMULATION_ONLY",
+      "approved_by": null,
+      "created_at": "2026-10-01T00:00:00Z"
+    },
+    {
+      "id": "90000000-0000-4000-8000-000000000002",
+      "rule_code": "CONTRACT_BUSINESS_MODEL_POLICY",
+      "version_number": 1,
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_until": null,
+      "rule_config": {
+        "default_production_model": "UNCONFIRMED",
+        "allow_simulation_modes": ["PRINCIPAL", "AGENT"],
+        "pending_decision_ref": "BSD-DEC-001"
+      },
+      "approval_status": "DRAFT",
+      "policy_classification": "PENDING_SOP",
+      "approved_by": null,
+      "created_at": "2026-10-01T00:00:00Z"
+    },
+    {
+      "id": "90000000-0000-4000-8000-000000000003",
+      "rule_code": "MULTI_FARMER_ALLOCATION_POLICY",
+      "version_number": 1,
+      "effective_from": "2026-10-01T00:00:00Z",
+      "effective_until": null,
+      "rule_config": {
+        "method": "PROPORTIONAL_ORIGIN_WEIGHT_SIMULATION",
+        "pending_decision_ref": "BSD-DEC-013"
+      },
+      "approval_status": "DRAFT",
+      "policy_classification": "SIMULATION_ONLY",
+      "approved_by": null,
+      "created_at": "2026-10-01T00:00:00Z"
+    }
+  ],
+  "reconciliation_cases": [
+    {
+      "id": "90000000-0000-4000-8000-000000000101",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000001",
+      "delivery_order_number": "EDO-2026-1110-042",
+      "mill_ticket_id": "80000000-0000-4000-8000-000000000001",
+      "revision_number": 1,
+      "origin_weight_kg": "10000.000",
+      "mill_weight_kg": "9900.000",
+      "difference_weight_kg": "100.000",
+      "difference_percent": "1.0000",
+      "tolerance_percent": "1.5000",
+      "rule_version_id": "90000000-0000-4000-8000-000000000001",
+      "tolerance_policy_classification": "SIMULATION_ONLY",
+      "is_negative_difference": false,
+      "status": "MATCHED",
+      "is_current": true,
+      "calculated_at": "2026-11-10T04:00:00Z",
+      "resolved_at": null,
+      "dispute_reviews": [],
+      "farmer_allocations": [
+        {
+          "id": "90000000-0000-4000-8000-000000000501",
+          "receipt_id": "50000000-0000-4000-8000-000000000001",
+          "farmer_id": "40000000-0000-4000-8000-000000000101",
+          "farmer_name": "Hendra Wijaya",
+          "allocation_basis_weight_kg": "3000.000",
+          "agreed_weight_kg": "2970.000",
+          "allocation_policy_version_id": "90000000-0000-4000-8000-000000000003",
+          "gross_amount": "8464500.00",
+          "deduction_amount": "0.00",
+          "net_amount": "8464500.00",
+          "status": "SIMULATED",
+          "policy_classification": "SIMULATION_ONLY"
+        },
+        {
+          "id": "90000000-0000-4000-8000-000000000502",
+          "receipt_id": "50000000-0000-4000-8000-000000000002",
+          "farmer_id": "40000000-0000-4000-8000-000000000102",
+          "farmer_name": "Siti Aminah",
+          "allocation_basis_weight_kg": "2000.000",
+          "agreed_weight_kg": "1980.000",
+          "allocation_policy_version_id": "90000000-0000-4000-8000-000000000003",
+          "gross_amount": "5643000.00",
+          "deduction_amount": "0.00",
+          "net_amount": "5643000.00",
+          "status": "SIMULATED",
+          "policy_classification": "SIMULATION_ONLY"
+        },
+        {
+          "id": "90000000-0000-4000-8000-000000000503",
+          "receipt_id": "50000000-0000-4000-8000-000000000003",
+          "farmer_id": "40000000-0000-4000-8000-000000000103",
+          "farmer_name": "Budi Santoso",
+          "allocation_basis_weight_kg": "5000.000",
+          "agreed_weight_kg": "4950.000",
+          "allocation_policy_version_id": "90000000-0000-4000-8000-000000000003",
+          "gross_amount": "14107500.00",
+          "deduction_amount": "0.00",
+          "net_amount": "14107500.00",
+          "status": "SIMULATED",
+          "policy_classification": "SIMULATION_ONLY"
+        }
+      ]
+    },
+    {
+      "id": "90000000-0000-4000-8000-000000000102",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000002",
+      "delivery_order_number": "EDO-2026-1110-043",
+      "mill_ticket_id": null,
+      "revision_number": 1,
+      "origin_weight_kg": "10000.000",
+      "mill_weight_kg": "0.000",
+      "difference_weight_kg": "0.000",
+      "difference_percent": "0.0000",
+      "tolerance_percent": "1.5000",
+      "rule_version_id": "90000000-0000-4000-8000-000000000001",
+      "tolerance_policy_classification": "SIMULATION_ONLY",
+      "is_negative_difference": false,
+      "status": "WAITING_TICKET",
+      "is_current": true,
+      "calculated_at": null,
+      "resolved_at": null,
+      "dispute_reviews": [],
+      "farmer_allocations": []
+    },
+    {
+      "id": "90000000-0000-4000-8000-000000000103",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000098",
+      "delivery_order_number": "EDO-2026-1109-039",
+      "mill_ticket_id": "80000000-0000-4000-8000-000000000098",
+      "revision_number": 1,
+      "origin_weight_kg": "10000.000",
+      "mill_weight_kg": "9600.000",
+      "difference_weight_kg": "400.000",
+      "difference_percent": "4.0000",
+      "tolerance_percent": "1.5000",
+      "rule_version_id": "90000000-0000-4000-8000-000000000001",
+      "tolerance_policy_classification": "SIMULATION_ONLY",
+      "is_negative_difference": false,
+      "status": "DISPUTE_HOLD",
+      "is_current": true,
+      "calculated_at": "2026-11-09T09:00:00Z",
+      "resolved_at": null,
+      "dispute_reviews": [
+        {
+          "id": "90000000-0000-4000-8000-000000000301",
+          "reviewer_id": "10000000-0000-4000-8000-000000000005",
+          "previous_status": "DISPUTE_HOLD",
+          "decision": "HOLD_FOR_AUDIT",
+          "reason": "Susut 4,00% melebihi batas simulasi 1,50%. Sedang mencocokkan bukti slip jembatan timbang PKS (BSD §17.6).",
+          "evidence_file_id": "a0000000-0000-4000-8000-000000000902",
+          "approved_by": null,
+          "reviewed_at": "2026-11-09T10:00:00Z"
+        }
+      ],
+      "farmer_allocations": []
+    },
+    {
+      "id": "90000000-0000-4000-8000-000000000104",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000099",
+      "delivery_order_number": "EDO-2026-1109-040",
+      "mill_ticket_id": "80000000-0000-4000-8000-000000000099",
+      "revision_number": 1,
+      "origin_weight_kg": "10000.000",
+      "mill_weight_kg": "10150.000",
+      "difference_weight_kg": "-150.000",
+      "difference_percent": "-1.5000",
+      "tolerance_percent": "1.5000",
+      "rule_version_id": "90000000-0000-4000-8000-000000000001",
+      "tolerance_policy_classification": "SIMULATION_ONLY",
+      "is_negative_difference": true,
+      "status": "UNDER_REVIEW",
+      "is_current": true,
+      "calculated_at": "2026-11-09T11:00:00Z",
+      "resolved_at": null,
+      "dispute_reviews": [
+        {
+          "id": "90000000-0000-4000-8000-000000000302",
+          "reviewer_id": "10000000-0000-4000-8000-000000000005",
+          "previous_status": "DISPUTE_HOLD",
+          "decision": "REQUIRE_TICKET_REVISION",
+          "reason": "BR-REC-009: Berat PKS lebih besar 150 kg dari berat asal (selisih negatif -1,50%). Tidak boleh dianggap susut wajar; butuh verifikasi timbangan ulang.",
+          "evidence_file_id": null,
+          "approved_by": null,
+          "reviewed_at": "2026-11-09T11:15:00Z"
+        }
+      ],
+      "farmer_allocations": []
+    }
+  ]
+}
