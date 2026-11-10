@@ -1,0 +1,900 @@
+# Canonical Business State Catalog — AgroNiaga TBS (Perumda Tuah Sekata)
+# Authority: AFD V1.1 (§28-31), DBD V1.1 (§8-14), BSD V1.1 (§7, §8, §10-22, §26)
+# Distinction enforced per M0 §11: persisted_states vs derived_states vs ui_presentation_states vs error_states vs simulation_states
+
+version: "1.0.0"
+contract_baseline: "M0-V1.1"
+
+state_classification_notes:
+  persisted_state: "Disimpan eksplisit pada kolom status di PostgreSQL."
+  derived_state: "Dihitung dinamis saat pembacaan dari kombinasi waktu/periode berlaku atau tabel turunan (mis. EXPIRED pada harga, settlement_status PAID pada faktur)."
+  ui_presentation_state: "Kondisi antarmuka frontend (Loading, Empty, Error, Offline, Stale, Unsaved) sesuai AFD §38 — bukan status bisnis backend."
+  simulation_only: "Perilaku/nilai menggunakan aturan simulasi sambil menunggu pengesahan SOP Perumda (AFD §41 / BSD §35)."
+
+state_machines:
+  # =========================================================================
+  # 1. HARGA TBS PKS (mill_price_quotes)
+  # =========================================================================
+  - machine_id: SM-01_PRICE_QUOTE
+    business_resource: "Harga Pembelian TBS Multi-PKS (mill_price_quotes)"
+    module: pricing
+    persisted_states:
+      - DRAFT
+      - PENDING_VERIFICATION
+      - VERIFIED
+      - REJECTED
+      - PUBLISHED
+      - REVOKED
+    derived_states:
+      - name: EXPIRED
+        derivation_rule: "status == 'PUBLISHED' AND effective_until IS NOT NULL AND effective_until < NOW()"
+        source_ref: "BSD §7.3, DBD §8.4"
+    initial_state: DRAFT
+    terminal_states:
+      - REJECTED
+      - REVOKED
+    pending_sop_classification: CONFIRMED
+    transitions:
+      - from: DRAFT
+        to: PENDING_VERIFICATION
+        action: SUBMIT_PRICE_FOR_VERIFICATION
+        api_operation_id: submitPriceForVerification
+        required_permission: prices.submit
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "price_per_kg > 0"
+          - "source_id dan price_category_id aktif"
+          - "effective_from valid (dan effective_until > effective_from bila diisi)"
+        business_rules: [BR-PRC-001, BR-PRC-003, BR-PRC-004, BR-PRC-005]
+        side_effects:
+          - "Catat entri price_verification_events"
+        error_codes: [PRICE_INVALID_AMOUNT, PRICE_INVALID_PERIOD, PRICE_INVALID_STATE_TRANSITION, AUTH_ACCESS_DENIED]
+        audit_required: true
+        pending_sop: false
+
+      - from: PENDING_VERIFICATION
+        to: VERIFIED
+        action: APPROVE_PRICE_VERIFICATION
+        api_operation_id: verifyOrRejectPrice
+        required_permission: prices.verify
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Actor ID != submitted_by (Maker != Checker, BSD §4.2)"
+          - "Bukan peran SYSTEM_ADMIN (BR-SYS-002)"
+        business_rules: [BR-PRC-006, BR-CMP-001]
+        side_effects:
+          - "Isi verified_by, verified_at; catat price_verification_events"
+        error_codes: [AUTH_CONFLICT_OF_DUTIES, AUTH_OPERATION_FORBIDDEN, PRICE_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: PENDING_VERIFICATION
+        to: REJECTED
+        action: REJECT_PRICE_VERIFICATION
+        api_operation_id: verifyOrRejectPrice
+        required_permission: prices.verify
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Alasan penolakan (reason) wajib diisi"
+          - "Actor ID != submitted_by"
+        business_rules: [BR-PRC-006]
+        side_effects:
+          - "Catat price_verification_events dengan reason"
+        error_codes: [VAL_REQUIRED_FIELD, AUTH_CONFLICT_OF_DUTIES, PRICE_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: VERIFIED
+        to: PUBLISHED
+        action: PUBLISH_PRICE
+        api_operation_id: publishPrice
+        required_permission: prices.publish
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Status saat ini VERIFIED"
+          - "Tidak ada PUBLISHED lain yang tumpang tindih untuk (mill_id, price_category_id) pada periode berlaku"
+          - "PKS aktif (mills.partnership_status mengizinkan)"
+        business_rules: [BR-PRC-006, BR-PRC-010, BR-PRC-012]
+        side_effects:
+          - "Isi published_at; setelah commit database, invalidasi Redis key public:prices:v1:*"
+        error_codes: [PRICE_NOT_VERIFIED, PRICE_OVERLAPPING_PERIOD, PRICE_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: PUBLISHED
+        to: REVOKED
+        action: REVOKE_PRICE
+        api_operation_id: revokePrice
+        required_permission: prices.revoke
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Alasan pencabutan wajib diisi"
+          - "Harga historis yang sudah dipakai kontrak/transaksi tetap terlacak"
+        business_rules: [BR-PRC-010, BR-PRC-011, BR-PRC-012]
+        side_effects:
+          - "Simpan event pencabutan; invalidasi cache public:prices:v1:* setelah commit"
+        error_codes: [VAL_REQUIRED_FIELD, PRICE_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+  # =========================================================================
+  # 2. PENERIMAAN TBS PETANI DI KOPERASI (tbs_receipts)
+  # =========================================================================
+  - machine_id: SM-02_TBS_RECEIPT
+    business_resource: "Penerimaan TBS Petani (tbs_receipts)"
+    module: tbs_receiving
+    persisted_states:
+      - DRAFT
+      - VALIDATED
+      - ALLOCATED
+      - SHIPPED
+      - CLOSED
+      - CANCELLED
+    derived_states: []
+    initial_state: DRAFT
+    terminal_states:
+      - CLOSED
+      - CANCELLED
+    pending_sop_classification: CONFIRMED
+    transitions:
+      - from: DRAFT
+        to: VALIDATED
+        action: VALIDATE_TBS_RECEIPT
+        api_operation_id: validateReceipt
+        required_permission: receipts.validate
+        required_scope: COOPERATIVE
+        preconditions:
+          - "Petani dan kebun aktif serta berada dalam cakupan koperasi"
+          - "Minimal 1 versi receipt_weighing_revisions (is_current=true) valid (tare <= gross)"
+        business_rules: [BR-RCV-001, BR-RCV-002, BR-RCV-005, BR-008, BR-009]
+        side_effects:
+          - "Penerimaan masuk antrean siap dialokasikan ke e-DO"
+        error_codes: [TBS_INVALID_STATE_TRANSITION, TBS_INVALID_WEIGHT, AUTH_SCOPE_FORBIDDEN]
+        audit_required: true
+        pending_sop: false
+
+      - from: VALIDATED
+        to: ALLOCATED
+        action: ALLOCATE_RECEIPT_TO_EDO
+        api_operation_id: issueDeliveryOrder
+        required_permission: delivery_orders.issue
+        required_scope: COOPERATIVE
+        preconditions:
+          - "Belum memiliki baris delivery_order_lines berstatus ACTIVE"
+          - "Dipanggil atomik saat penerbitan e-DO"
+        business_rules: [BR-DO-003, BR-DO-004]
+        side_effects:
+          - "Simpan delivery_order_lines (allocation_status=ACTIVE, origin_weight_snapshot_kg)"
+        error_codes: [LOG_DELIVERY_ALREADY_ASSIGNED, CONTRACT_QUOTA_EXCEEDED]
+        audit_required: true
+        pending_sop: true
+
+      - from: ALLOCATED
+        to: VALIDATED
+        action: RELEASE_RECEIPT_ALLOCATION
+        api_operation_id: cancelDeliveryOrder
+        required_permission: delivery_orders.cancel
+        required_scope: COOPERATIVE
+        preconditions:
+          - "Hanya terjadi bila e-DO dibatalkan sebelum tiba/diterima PKS"
+        business_rules: [BR-DO-003, BSD §14.5]
+        side_effects:
+          - "Ubah delivery_order_lines menjadi RELEASED dengan released_at; penerimaan siap dialokasi ulang"
+        error_codes: [LOG_CANCELLATION_FORBIDDEN]
+        audit_required: true
+        pending_sop: false
+
+      - from: ALLOCATED
+        to: SHIPPED
+        action: MARK_RECEIPT_SHIPPED
+        api_operation_id: transitionDeliveryOrderStatus
+        required_permission: delivery_orders.transition
+        required_scope: COOPERATIVE
+        preconditions:
+          - "e-DO terkait beralih ke IN_TRANSIT"
+        business_rules: [BR-SHP-001, BSD §8.4]
+        side_effects:
+          - "Kunci perubahan berat langsung di tingkat koperasi"
+        error_codes: [LOG_INVALID_STATE_TRANSITION, TBS_RECEIPT_LOCKED]
+        audit_required: true
+        pending_sop: false
+
+      - from: SHIPPED
+        to: CLOSED
+        action: CLOSE_RECEIPT
+        api_operation_id: transitionDeliveryOrderStatus
+        required_permission: delivery_orders.transition
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "e-DO terkait berstatus COMPLETED"
+        business_rules: [BR-SHP-004]
+        side_effects:
+          - "Penerimaan berstatus selesai secara operasional pengiriman (bukan berarti pembayaran petani sudah PAID)"
+        error_codes: [LOG_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: DRAFT
+        to: CANCELLED
+        action: CANCEL_RECEIPT_DRAFT
+        api_operation_id: cancelReceipt
+        required_permission: receipts.cancel
+        required_scope: COOPERATIVE
+        preconditions:
+          - "Belum pernah masuk pengiriman aktif; alasan pencatatan pembatalan wajib"
+        business_rules: [BSD §8.5]
+        side_effects:
+          - "Pertahankan riwayat dalam kondisi CANCELLED (tanpa hapus fisik)"
+        error_codes: [VAL_REQUIRED_FIELD, TBS_RECEIPT_LOCKED]
+        audit_required: true
+        pending_sop: false
+
+      - from: VALIDATED
+        to: CANCELLED
+        action: CANCEL_VALIDATED_RECEIPT
+        api_operation_id: cancelReceipt
+        required_permission: receipts.cancel
+        required_scope: COOPERATIVE
+        preconditions:
+          - "Belum ALLOCATED pada e-DO mana pun; alasan wajib"
+        business_rules: [BSD §8.5]
+        side_effects:
+          - "Audit trail wajib dicatat"
+        error_codes: [VAL_REQUIRED_FIELD, TBS_RECEIPT_LOCKED]
+        audit_required: true
+        pending_sop: false
+
+  # =========================================================================
+  # 3. KONTRAK NIAGA PKS (trade_contracts)
+  # =========================================================================
+  - machine_id: SM-03_TRADE_CONTRACT
+    business_resource: "Kontrak Niaga PKS (trade_contracts)"
+    module: contracts
+    persisted_states:
+      - DRAFT
+      - PENDING_APPROVAL
+      - ACTIVE
+      - SUSPENDED
+      - COMPLETED
+      - CANCELLED
+    derived_states:
+      - name: EXPIRED
+        derivation_rule: "status == 'ACTIVE' AND end_date < CURRENT_DATE"
+        source_ref: "BSD §11.3 BR-CON-004"
+    initial_state: DRAFT
+    terminal_states:
+      - COMPLETED
+      - CANCELLED
+    pending_sop_classification: PENDING_SOP
+    pending_sop_note: "Klasifikasi model usaha (PRINCIPAL/AGENT/UNCONFIRMED) dan kepatuhan regulasi kontrak menunggu pengesahan SOP (BSD-DEC-001, BSD-DEC-002)."
+    transitions:
+      - from: DRAFT
+        to: PENDING_APPROVAL
+        action: SUBMIT_CONTRACT
+        api_operation_id: createContract
+        required_permission: contracts.write
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "contract_number unik; end_date >= start_date; pihak cocok dengan business_model_code"
+        business_rules: [BR-CON-001, BR-CON-002]
+        side_effects:
+          - "Siap ditinjau untuk aktivasi kontrak"
+        error_codes: [MD_DUPLICATE_CODE, VAL_INVALID_DATE_RANGE, CONTRACT_BUSINESS_MODEL_UNCONFIRMED]
+        audit_required: true
+        pending_sop: true
+
+      - from: PENDING_APPROVAL
+        to: ACTIVE
+        action: APPROVE_CONTRACT
+        api_operation_id: approveContract
+        required_permission: contracts.approve
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Actor ID != pembuat kontrak; bukan SYSTEM_ADMIN (BR-SYS-002)"
+          - "PKS mitra aktif"
+        business_rules: [BR-CON-003, BR-CON-005]
+        side_effects:
+          - "Isi approved_by, approved_at; kontrak dapat dipakai reservasi kuota"
+        error_codes: [AUTH_CONFLICT_OF_DUTIES, AUTH_OPERATION_FORBIDDEN, CONTRACT_NOT_ACTIVE]
+        audit_required: true
+        pending_sop: false
+
+  # =========================================================================
+  # 4. RESERVASI KUOTA KONTRAK (quota_reservations)
+  # =========================================================================
+  - machine_id: SM-04_QUOTA_RESERVATION
+    business_resource: "Reservasi Kuota Periode Kontrak (quota_reservations)"
+    module: contracts
+    persisted_states:
+      - RESERVED
+      - CONSUMED
+      - RELEASED
+    derived_states: []
+    initial_state: RESERVED
+    terminal_states:
+      - CONSUMED
+      - RELEASED
+    pending_sop_classification: PENDING_SOP
+    pending_sop_note: "Penentuan apakah consumed_weight_kg memakai berat asal atau berat diterima PKS menunggu BSD-DEC-008."
+    transitions:
+      - from: RESERVED
+        to: CONSUMED
+        action: CONSUME_QUOTA_RESERVATION
+        api_operation_id: transitionDeliveryOrderStatus
+        required_permission: quotas.consume
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "e-DO telah dikonfirmasi diterima PKS (status RECEIVED / COMPLETED)"
+        business_rules: [BR-QTA-003, BR-QTA-006]
+        side_effects:
+          - "Isi consumed_weight_kg dan consumed_at"
+        error_codes: [CONTRACT_CONCURRENT_CONFLICT]
+        audit_required: true
+        pending_sop: true
+
+      - from: RESERVED
+        to: RELEASED
+        action: RELEASE_QUOTA_RESERVATION
+        api_operation_id: cancelDeliveryOrder
+        required_permission: quotas.release
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "e-DO dibatalkan sebelum dikonsumsi PKS"
+        business_rules: [BR-QTA-004]
+        side_effects:
+          - "Isi released_at sehingga kuota tersedia bertambah kembali"
+        error_codes: [LOG_CANCELLATION_FORBIDDEN]
+        audit_required: true
+        pending_sop: false
+
+  # =========================================================================
+  # 5. SURAT JALAN ELEKTRONIK / e-DO (delivery_orders)
+  # =========================================================================
+  - machine_id: SM-05_DELIVERY_ORDER
+    business_resource: "Surat Jalan Elektronik / e-DO (delivery_orders)"
+    module: logistics
+    persisted_states:
+      - DRAFT
+      - READY
+      - IN_TRANSIT
+      - ARRIVED
+      - RECEIVED
+      - COMPLETED
+      - CANCELLED
+    derived_states: []
+    initial_state: DRAFT
+    terminal_states:
+      - COMPLETED
+      - CANCELLED
+    pending_sop_classification: PENDING_SOP
+    pending_sop_note: "Hak penerbitan e-DO (Koperasi vs Perumda, BSD-DEC-009) dan kemungkinan status RETURNED/REJECTED untuk muatan ditolak PKS (BSD-DEC-010)."
+    transitions:
+      - from: DRAFT
+        to: READY
+        action: ISSUE_EDO
+        api_operation_id: issueDeliveryOrder
+        required_permission: delivery_orders.issue
+        required_scope: COOPERATIVE
+        preconditions:
+          - "Header Idempotency-Key wajib"
+          - "Minimal 1 receipt berstatus VALIDATED tanpa alokasi ACTIVE lain"
+          - "Kontrak ACTIVE pada periode berlaku dan sisa kuota >= total berat muatan"
+          - "PKS tujuan aktif (BR-MD-013), kendaraan & sopir terisi"
+        business_rules: [BR-DO-001, BR-DO-002, BR-DO-003, BR-DO-004, BR-DO-005, BR-QTA-002]
+        side_effects:
+          - "Lock alokasi receipt ACTIVE, reservasi kuota RESERVED, generate delivery_order_number & qr_reference_hash, catat delivery_status_events"
+        error_codes: [LOG_DELIVERY_ALREADY_ASSIGNED, CONTRACT_EXPIRED, CONTRACT_QUOTA_EXCEEDED, CONTRACT_NOT_ACTIVE, IDM_KEY_CONFLICT_PAYLOAD_MISMATCH]
+        audit_required: true
+        pending_sop: true
+
+      - from: READY
+        to: IN_TRANSIT
+        action: DISPATCH_EDO
+        api_operation_id: transitionDeliveryOrderStatus
+        required_permission: delivery_orders.transition
+        required_scope: COOPERATIVE
+        preconditions:
+          - "e-DO berstatus READY"
+        business_rules: [BR-SHP-001, BR-SHP-002, BR-SHP-003]
+        side_effects:
+          - "Isi departed_at; ubah tbs_receipts menjadi SHIPPED; catat delivery_status_events"
+        error_codes: [LOG_INVALID_STATE_TRANSITION, LOG_STALE_RECORD_VERSION]
+        audit_required: true
+        pending_sop: false
+
+      - from: IN_TRANSIT
+        to: ARRIVED
+        action: CONFIRM_ARRIVAL_AT_MILL
+        api_operation_id: verifyDeliveryOrderQr
+        required_permission: delivery_orders.verify_arrival
+        required_scope: MILL
+        preconditions:
+          - "Petugas PKS terautentikasi dan scope mill_id cocok dengan delivery_orders.mill_id"
+          - "e-DO bukan CANCELLED"
+        business_rules: [BR-SHP-001, BR-SHP-002, AFD §17.2]
+        side_effects:
+          - "Isi arrived_at; catat delivery_status_events; e-DO siap ditimbang PKS"
+        error_codes: [MILL_EDO_MILL_MISMATCH, LOG_QR_VERIFICATION_FAILED, LOG_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: ARRIVED
+        to: RECEIVED
+        action: CONFIRM_MILL_RECEIPT
+        api_operation_id: verifyMillTicket
+        required_permission: mill_tickets.verify
+        required_scope: MILL
+        preconditions:
+          - "Tiket timbang PKS current sudah tercatat dan terverifikasi"
+        business_rules: [BR-SHP-002, BR-MILL-004]
+        side_effects:
+          - "Konversi reservasi kuota RESERVED -> CONSUMED; rekonsiliasi beralih ke READY"
+        error_codes: [LOG_INVALID_STATE_TRANSITION, MILL_EDO_NOT_ELIGIBLE]
+        audit_required: true
+        pending_sop: true
+
+      - from: RECEIVED
+        to: COMPLETED
+        action: COMPLETE_DELIVERY_OPERATIONAL
+        api_operation_id: transitionDeliveryOrderStatus
+        required_permission: delivery_orders.transition
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Penerimaan PKS selesai; operasional pengiriman ditutup (tetap terpisah dari status lunas finansial, BR-SHP-004)"
+        business_rules: [BR-SHP-004]
+        side_effects:
+          - "Isi completed_at; tutup penerimaan asal tbs_receipts menjadi CLOSED"
+        error_codes: [LOG_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: DRAFT
+        to: CANCELLED
+        action: CANCEL_EDO_DRAFT
+        api_operation_id: cancelDeliveryOrder
+        required_permission: delivery_orders.cancel
+        required_scope: COOPERATIVE
+        preconditions:
+          - "Alasan pembatalan wajib"
+        business_rules: [BSD §14.5]
+        side_effects:
+          - "Pertahankan dokumen CANCELLED dalam riwayat"
+        error_codes: [VAL_REQUIRED_FIELD, LOG_CANCELLATION_FORBIDDEN]
+        audit_required: true
+        pending_sop: false
+
+      - from: READY
+        to: CANCELLED
+        action: CANCEL_ISSUED_EDO
+        api_operation_id: cancelDeliveryOrder
+        required_permission: delivery_orders.cancel
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Belum IN_TRANSIT / belum diterima PKS; alasan wajib"
+        business_rules: [BR-QTA-004, BSD §14.5]
+        side_effects:
+          - "Lepaskan alokasi muatan RELEASED, kembalikan receipt -> VALIDATED, lepaskan reservasi kuota -> RELEASED"
+        error_codes: [VAL_REQUIRED_FIELD, LOG_CANCELLATION_FORBIDDEN]
+        audit_required: true
+        pending_sop: true
+
+  # =========================================================================
+  # 6. TIKET TIMBANG PKS (mill_weighing_tickets)
+  # =========================================================================
+  - machine_id: SM-06_MILL_TICKET
+    business_resource: "Tiket Timbang PKS (mill_weighing_tickets)"
+    module: mill_weighing
+    persisted_states:
+      - DRAFT
+      - SUBMITTED
+      - VERIFIED
+    derived_states:
+      - name: SUPERSEDED_REVISION
+        derivation_rule: "is_current == FALSE AND previous_ticket_id menunjuk ke versi sebelumnya"
+        source_ref: "DBD §12.1-12.2"
+    initial_state: DRAFT
+    terminal_states:
+      - VERIFIED
+    pending_sop_classification: CONFIRMED
+    pending_sop_note: "Baseline MVP menetapkan maksimal satu tiket is_current=true per e-DO (BSD-DEC-011); versi revisi baru dibentuk via reviseMillTicket tanpa menghapus riwayat."
+    transitions:
+      - from: DRAFT
+        to: SUBMITTED
+        action: SUBMIT_MILL_TICKET
+        api_operation_id: createMillTicket
+        required_permission: mill_tickets.create
+        required_scope: MILL
+        preconditions:
+          - "e-DO tujuan cocok dengan scope mill_id dan berstatus ARRIVED"
+          - "gross >= 0, tare >= 0, tare <= gross"
+          - "ticket_number unik per PKS; e-DO belum memiliki tiket current"
+        business_rules: [BR-MILL-001, BR-MILL-002, BR-MILL-003, BR-008, BR-009]
+        side_effects:
+          - "Simpan tiket current; hitung net_weight_kg di server"
+        error_codes: [MILL_EDO_MILL_MISMATCH, MILL_DUPLICATE_TICKET, MILL_EDO_NOT_ELIGIBLE, TBS_INVALID_WEIGHT]
+        audit_required: true
+        pending_sop: false
+
+      - from: SUBMITTED
+        to: VERIFIED
+        action: VERIFY_MILL_TICKET
+        api_operation_id: verifyMillTicket
+        required_permission: mill_tickets.verify
+        required_scope: MILL
+        preconditions:
+          - "Tiket valid dan belum pernah divalidasi ulang setelah faktur ISSUED"
+        business_rules: [BR-MILL-004]
+        side_effects:
+          - "Isi verified_by, verified_at; memicu kesiapan rekonsiliasi READY"
+        error_codes: [MILL_TICKET_ALREADY_FINAL, AUTH_ACCESS_DENIED]
+        audit_required: true
+        pending_sop: false
+
+  # =========================================================================
+  # 7. KASUS REKONSILIASI TIMBANGAN (reconciliation_cases)
+  # =========================================================================
+  - machine_id: SM-07_RECONCILIATION_CASE
+    business_resource: "Rekonsiliasi Berat Asal vs PKS (reconciliation_cases)"
+    module: reconciliation
+    persisted_states:
+      - WAITING_TICKET
+      - READY
+      - MATCHED
+      - DISPUTE_HOLD
+      - UNDER_REVIEW
+      - RESOLVED
+      - CANCELLED
+    derived_states:
+      - name: ANOMALY_NEGATIVE_DIFFERENCE
+        derivation_rule: "difference_weight_kg < 0 (berat PKS lebih besar dari berat asal; otomatis ditahan untuk pemeriksaan)"
+        source_ref: "BSD §17.9 BR-REC-009"
+    initial_state: WAITING_TICKET
+    terminal_states:
+      - MATCHED
+      - RESOLVED
+      - CANCELLED
+    pending_sop_classification: SIMULATION_ONLY
+    pending_sop_note: "Nilai ambang toleransi 1,5000% (BR-REC-003) disimpan sebagai system_rule_versions berstatus SIMULATION_ONLY sampai disahkan Perumda (BSD-DEC-007)."
+    transitions:
+      - from: WAITING_TICKET
+        to: READY
+        action: MARK_RECONCILIATION_READY
+        api_operation_id: verifyMillTicket
+        required_permission: mill_tickets.verify
+        required_scope: MILL
+        preconditions:
+          - "Tiket timbang PKS current berstatus VERIFIED dan definisi berat asal setara tersedia"
+        business_rules: [BR-016, BSD §17.2]
+        side_effects:
+          - "Kasus siap dihitung selisihnya"
+        error_codes: [REC_NOT_READY]
+        audit_required: false
+        pending_sop: false
+
+      - from: READY
+        to: MATCHED
+        action: CALCULATE_RECONCILIATION_MATCHED
+        api_operation_id: calculateReconciliation
+        required_permission: reconciliations.calculate
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Header Idempotency-Key wajib"
+          - "origin_weight_kg > 0, definisi berat setara"
+          - "difference_weight_kg >= 0 dan difference_percent <= rule.tolerance_percent"
+        business_rules: [BR-REC-001, BR-REC-004, BR-REC-005, BR-REC-006, BR-REC-007]
+        side_effects:
+          - "Simpan snapshot rule_version_id dan tolerance_percent; kasus siap dipakai faktur"
+        error_codes: [REC_NOT_READY, REC_INVALID_WEIGHT_BASIS, IDM_KEY_CONFLICT_PAYLOAD_MISMATCH]
+        audit_required: true
+        pending_sop: true
+
+      - from: READY
+        to: DISPUTE_HOLD
+        action: CALCULATE_RECONCILIATION_HOLD
+        api_operation_id: calculateReconciliation
+        required_permission: reconciliations.calculate
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "difference_percent > rule.tolerance_percent ATAU difference_weight_kg < 0 (anomali surplus PKS)"
+        business_rules: [BR-REC-008, BR-REC-009, BR-REC-010]
+        side_effects:
+          - "Menahan transaksi dari penerbitan faktur/pembayaran final sampai sengketa diselesaikan"
+        error_codes: [REC_WEIGHT_DISPUTE, REC_NEGATIVE_DIFFERENCE_HOLD]
+        audit_required: true
+        pending_sop: true
+
+  # =========================================================================
+  # 8. PENANGANAN DISPUTE / SENGKETA (dispute_reviews atas reconciliation_cases)
+  # =========================================================================
+  - machine_id: SM-08_DISPUTE_REVIEW
+    business_resource: "Penanganan Sengketa Rekonsiliasi (dispute_reviews / reconciliation_cases)"
+    module: reconciliation
+    persisted_states:
+      - DISPUTE_HOLD
+      - UNDER_REVIEW
+      - RESOLVED
+      - CANCELLED
+    derived_states: []
+    initial_state: DISPUTE_HOLD
+    terminal_states:
+      - RESOLVED
+      - CANCELLED
+    pending_sop_classification: PENDING_SOP
+    pending_sop_note: "Pejabat final penyelesai dispute dan SLA penyelesaian menunggu pengesahan SOP (BSD-DEC-012, BSD-DEC-019)."
+    transitions:
+      - from: DISPUTE_HOLD
+        to: UNDER_REVIEW
+        action: START_DISPUTE_REVIEW
+        api_operation_id: submitDisputeReview
+        required_permission: reconciliations.review
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Alasan/klarifikasi awal dan hasil pengecekan dokumen wajib diisi"
+        business_rules: [BR-DSP-001, BR-DSP-002, BR-DSP-006]
+        side_effects:
+          - "Catat entri dispute_reviews (reviewer_id, reason, evidence_file_id)"
+        error_codes: [REC_DISPUTE_REASON_REQUIRED, REC_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: UNDER_REVIEW
+        to: RESOLVED
+        action: RESOLVE_DISPUTE
+        api_operation_id: resolveReconciliationDispute
+        required_permission: reconciliations.resolve
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Decision dan reason wajib terisi"
+          - "Checker (approved_by) != Reviewer pembuat review awal (Maker != Checker); bukan SYSTEM_ADMIN"
+        business_rules: [BR-DSP-001, BR-DSP-002, BR-DSP-003, BR-DSP-004, BR-DSP-005]
+        side_effects:
+          - "Isi resolved_at dan keputusan berat penyelesaian tanpa menghapus angka asal/tiket awal; transaksi dapat berlanjut ke keuangan"
+        error_codes: [REC_DISPUTE_REASON_REQUIRED, AUTH_CONFLICT_OF_DUTIES, AUTH_OPERATION_FORBIDDEN, REC_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: true
+
+      - from: UNDER_REVIEW
+        to: CANCELLED
+        action: CANCEL_DISPUTED_CASE
+        api_operation_id: resolveReconciliationDispute
+        required_permission: reconciliations.resolve
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Keputusan resmi pembatalan/prosedur khusus + alasan wajib"
+        business_rules: [BR-DSP-002, BR-DSP-004]
+        side_effects:
+          - "Tutup kasus tanpa melanjutkan ke pembayaran"
+        error_codes: [REC_DISPUTE_REASON_REQUIRED, AUTH_CONFLICT_OF_DUTIES]
+        audit_required: true
+        pending_sop: true
+
+  # =========================================================================
+  # 9. FAKTUR TAGIHAN & KEWAJIBAN (invoices)
+  # =========================================================================
+  - machine_id: SM-09_INVOICE
+    business_resource: "Faktur Piutang/Utang Dagang (invoices)"
+    module: reconciliation
+    persisted_states:
+      - DRAFT
+      - PENDING_VERIFICATION
+      - VERIFIED
+      - ISSUED
+      - REJECTED
+      - VOID
+    derived_states:
+      - name: settlement_status
+        values: [UNPAID, PENDING_APPROVAL, APPROVED_UNPAID, AWAITING_PAYMENT, PENDING_VERIFICATION, PAID]
+        derivation_rule: "Dihitung dari payment_approvals dan payment_records.status == 'VERIFIED'; menjadi PAID hanya bila jumlah terverifikasi == total_amount dan bukan semata karena approval (BR-PAY-010, BSD §22.4)."
+        source_ref: "BSD §21.4, §22.4, DBD §14.6"
+    initial_state: DRAFT
+    terminal_states:
+      - ISSUED
+      - REJECTED
+      - VOID
+    pending_sop_classification: PENDING_SOP
+    pending_sop_note: "Penerbitan faktur nyata wajib memiliki business_model_code selain UNCONFIRMED (BSD-DEC-001, BSD-DEC-015)."
+    transitions:
+      - from: DRAFT
+        to: PENDING_VERIFICATION
+        action: SUBMIT_INVOICE_OR_CREATE
+        api_operation_id: createInvoiceDraft
+        required_permission: invoices.create
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "reconciliation_cases berstatus MATCHED atau RESOLVED"
+          - "Memisahkan ACCOUNTS_RECEIVABLE vs ACCOUNTS_PAYABLE dan creditor vs debtor"
+        business_rules: [BR-INV-001, BR-INV-002, BR-INV-004, BR-PAY-005]
+        side_effects:
+          - "Simpan snapshot business_model_code & rule version; hitung invoice_lines Decimal"
+        error_codes: [FIN_DISPUTE_HOLD_BLOCKED, MD_DUPLICATE_CODE]
+        audit_required: true
+        pending_sop: true
+
+      - from: PENDING_VERIFICATION
+        to: VERIFIED
+        action: VERIFY_INVOICE
+        api_operation_id: verifyInvoice
+        required_permission: invoices.verify
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Verifikator != pembuat faktur (Maker != Checker); bukan SYSTEM_ADMIN"
+        business_rules: [BR-INV-002, BR-INV-003]
+        side_effects:
+          - "Isi verified_by"
+        error_codes: [AUTH_CONFLICT_OF_DUTIES, AUTH_OPERATION_FORBIDDEN, FIN_INVOICE_NOT_VERIFIED]
+        audit_required: true
+        pending_sop: false
+
+      - from: PENDING_VERIFICATION
+        to: REJECTED
+        action: REJECT_INVOICE
+        api_operation_id: verifyInvoice
+        required_permission: invoices.verify
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Alasan penolakan wajib"
+        business_rules: [BR-INV-002]
+        side_effects:
+          - "Catat penolakan ke audit trail"
+        error_codes: [VAL_REQUIRED_FIELD, AUTH_CONFLICT_OF_DUTIES]
+        audit_required: true
+        pending_sop: false
+
+      - from: VERIFIED
+        to: ISSUED
+        action: ISSUE_INVOICE
+        api_operation_id: issueInvoice
+        required_permission: invoices.issue
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "business_model_code != 'UNCONFIRMED' untuk penerbitan faktur resmi (FIN_POLICY_UNCONFIRMED bila belum disahkan)"
+        business_rules: [BR-INV-001, BR-INV-005, DBD §10.1]
+        side_effects:
+          - "Isi issued_at; faktur masuk daftar kewajiban/tagihan terbuka (settlement_status=UNPAID)"
+        error_codes: [FIN_INVOICE_NOT_VERIFIED, FIN_POLICY_UNCONFIRMED]
+        audit_required: true
+        pending_sop: true
+
+  # =========================================================================
+  # 10. PERSETUJUAN PEMBAYARAN (payment_approvals)
+  # =========================================================================
+  - machine_id: SM-10_PAYMENT_APPROVAL
+    business_resource: "Persetujuan Otorisasi Pembayaran (payment_approvals)"
+    module: reconciliation
+    persisted_states:
+      - PENDING_APPROVAL
+      - APPROVED
+      - REJECTED
+    derived_states:
+      - name: AWAITING_PAYMENT
+        derivation_rule: "Approval berstatus APPROVED tetapi belum ada catatan payment_records VERIFIED berpelunasan penuh."
+        source_ref: "AFD §31.2, BSD §22.4, BR-PAY-010"
+    initial_state: PENDING_APPROVAL
+    terminal_states:
+      - APPROVED
+      - REJECTED
+    pending_sop_classification: PENDING_SOP
+    pending_sop_note: "Batas nominal kewenangan persetujuan antar-pejabat menunggu BSD-DEC-016."
+    transitions:
+      - from: PENDING_APPROVAL
+        to: APPROVED
+        action: APPROVE_PAYMENT_OBLIGATION
+        api_operation_id: approveOrRejectInvoicePayment
+        required_permission: payments.approve
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Header Idempotency-Key wajib"
+          - "Faktur berstatus ISSUED dan bebas DISPUTE_HOLD"
+          - "business_model_code != 'UNCONFIRMED'"
+          - "Approver != requested_by (Maker != Checker) DAN bukan SYSTEM_ADMIN (BR-SYS-002)"
+        business_rules: [BR-PAY-001, BR-PAY-002, BR-PAY-003, BR-PAY-004, BR-PAY-005, BR-PAY-010]
+        side_effects:
+          - "Simpan decided_at; mengubah derived settlement_status menjadi APPROVED / AWAITING_PAYMENT (DILARANG menjadi PAID)"
+        error_codes: [PAY_ALREADY_APPROVED, FIN_INVOICE_NOT_VERIFIED, FIN_DISPUTE_HOLD_BLOCKED, FIN_POLICY_UNCONFIRMED, AUTH_CONFLICT_OF_DUTIES, AUTH_OPERATION_FORBIDDEN]
+        audit_required: true
+        pending_sop: true
+
+      - from: PENDING_APPROVAL
+        to: REJECTED
+        action: REJECT_PAYMENT_OBLIGATION
+        api_operation_id: approveOrRejectInvoicePayment
+        required_permission: payments.approve
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Alasan penolakan wajib"
+          - "Approver != requested_by dan bukan SYSTEM_ADMIN"
+        business_rules: [BR-PAY-003, BR-PAY-004]
+        side_effects:
+          - "Catat keputusan penolakan beserta alasan"
+        error_codes: [VAL_REQUIRED_FIELD, AUTH_CONFLICT_OF_DUTIES, AUTH_OPERATION_FORBIDDEN]
+        audit_required: true
+        pending_sop: false
+
+  # =========================================================================
+  # 11. CATATAN & VERIFIKASI BUKTI PEMBAYARAN (payment_records)
+  # =========================================================================
+  - machine_id: SM-11_PAYMENT_RECORD
+    business_resource: "Pencatatan & Verifikasi Bukti Pembayaran (payment_records)"
+    module: reconciliation
+    persisted_states:
+      - DRAFT
+      - PENDING_VERIFICATION
+      - VERIFIED
+      - REJECTED
+      - REVERSED
+    derived_states:
+      - name: PAID
+        derivation_rule: "Status pelunasan kewajiban pada invoice ketika total payment_records.status == 'VERIFIED' mencapai total_amount invoice terkait (BSD §22.4)."
+        source_ref: "BSD §22.4, BR-PAY-010"
+    initial_state: DRAFT
+    terminal_states:
+      - VERIFIED
+      - REJECTED
+      - REVERSED
+    pending_sop_classification: PENDING_SOP
+    pending_sop_note: "Pembayaran parsial ditolak di MVP (BSD-DEC-017); bukti transfer nyata ke petani menunggu BSD-DEC-018."
+    transitions:
+      - from: DRAFT
+        to: PENDING_VERIFICATION
+        action: RECORD_PAYMENT_EVIDENCE
+        api_operation_id: recordPaymentEvidence
+        required_permission: payments.record
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Header Idempotency-Key wajib"
+          - "Faktur ISSUED; bila OUTBOUND wajib memiliki approval APPROVED"
+          - "Pasangan payer_party_id & payee_party_id cocok dengan arah INBOUND/OUTBOUND dan invoice (DBD §14.5)"
+          - "amount > 0 dan amount == invoice.total_amount pada baseline tanpa pembayaran parsial (BSD §22.5)"
+          - "Referensi bukti dan berkas lampiran tersedia"
+        business_rules: [BR-PAY-006, BR-PAY-007, BR-PAY-008, BR-PAY-009, BR-PAY-011]
+        side_effects:
+          - "Simpan catatan pembayaran menunggu verifikasi; tidak ada eksekusi auto bank transfer"
+        error_codes: [FIN_INVOICE_NOT_VERIFIED, PAY_APPROVAL_REQUIRED, PAY_PARTIAL_NOT_SUPPORTED, PAY_AMOUNT_EXCEEDS_INVOICE, PAY_INVALID_PARTY_PAIRING, PAY_DUPLICATE_PAYMENT, PAY_PROOF_REQUIRED]
+        audit_required: true
+        pending_sop: true
+
+      - from: PENDING_VERIFICATION
+        to: VERIFIED
+        action: VERIFY_PAYMENT_EVIDENCE
+        api_operation_id: verifyPaymentRecord
+        required_permission: payments.verify
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Verifikator != recorded_by (Maker != Checker); bukan SYSTEM_ADMIN"
+          - "Bukti pembayaran terlampir dan tervalidasi"
+        business_rules: [BR-PAY-009, BR-PAY-010, BR-PAY-011]
+        side_effects:
+          - "Isi verified_by, verified_at; jika faktur AP/koperasi lunas maka update settlement_status menjadi PAID; tetap pisahkan Jalur A (PKS->Perumda) vs Jalur B/C (Mitra/Petani)"
+        error_codes: [AUTH_CONFLICT_OF_DUTIES, AUTH_OPERATION_FORBIDDEN, PAY_PROOF_REQUIRED, PAY_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: PENDING_VERIFICATION
+        to: REJECTED
+        action: REJECT_PAYMENT_EVIDENCE
+        api_operation_id: verifyPaymentRecord
+        required_permission: payments.verify
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Alasan penolakan wajib; Maker != Checker"
+        business_rules: [BR-PAY-009]
+        side_effects:
+          - "Kewajiban tetap berstatus AWAITING_PAYMENT, bukan PAID"
+        error_codes: [VAL_REQUIRED_FIELD, AUTH_CONFLICT_OF_DUTIES, PAY_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: false
+
+      - from: VERIFIED
+        to: REVERSED
+        action: REVERSE_PAYMENT_RECORD
+        api_operation_id: verifyPaymentRecord
+        required_permission: payments.verify
+        required_scope: PERUMDA_GLOBAL
+        preconditions:
+          - "Koreksi resmi dengan alasan wajib (tanpa menghapus riwayat transaksi keuangan, BR-023)"
+        business_rules: [BR-023, BSD §22.6]
+        side_effects:
+          - "Catat reversal dan turunkan status lunas faktur terkait bila berlaku"
+        error_codes: [VAL_REQUIRED_FIELD, AUTH_CONFLICT_OF_DUTIES, PAY_INVALID_STATE_TRANSITION]
+        audit_required: true
+        pending_sop: true
