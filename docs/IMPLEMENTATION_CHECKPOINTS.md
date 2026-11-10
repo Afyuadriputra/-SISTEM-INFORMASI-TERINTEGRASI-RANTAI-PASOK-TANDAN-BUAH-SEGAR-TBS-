@@ -11,6 +11,61 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **D4** | Design Verification & Audit | `CONDITIONALLY_READY — DESIGN_FIXES_PENDING` | 2026-11-10 ([design-verification-signoff-report.md](file:///C:/Users/M-SI/.gemini/antigravity/brain/c367ac0e-9189-476d-b1f9-69ba6e1730ec/design-verification-signoff-report.md)) | Perbaikan temuan kritis awal (kontras sidebar `#B8C7BE`, privasi pencarian publik, `2105` Detail PKS `/pks/:id`, `2153` Logistik, `2009` 15-State Matrix, `W03.2B`/`W04.2B`, token Tailwind v4); 6 rute mandiri & 2 form master data masih terbuka untuk ditutup di D5. |
 | **D5** | Design Gap Closure & Final Sign-Off | **`READY — FIGCRAFT_DESIGN_SIGNOFF`** | 2026-11-10 ([d5-design-gap-closure-signoff.md](file:///C:/Users/M-SI/.gemini/antigravity/brain/c367ac0e-9189-476d-b1f9-69ba6e1730ec/d5-design-gap-closure-signoff.md)) | **26/26 (100%)** cakupan rute mandiri `AFD §36`, form penuh `FLOW-05` & `FLOW-06`, refactor `Organism/InternalSidebar #275` pada seluruh 21 layar internal desktop, 14 prototype flow penuh (`215` interaksi, `0` dangling), 7 layar bisnis mobile prioritas, `0/1451` gagal kontras WCAG, `0` missing font, dan `50` board/frame `readyForDev`. |
+| **M0** | Requirements & Contract Alignment | **`READY — M0_CONTRACT_ALIGNMENT_VERIFIED`** | 2026-11-10 ([M0_CONTRACT_VALIDATION_REPORT.md](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_CONTRACT_VALIDATION_REPORT.md)) | `openapi.v1.yaml` (`75` paths, `95` ops, `191` schemas), `error-catalog.yaml` (`69` kode error), `state-catalog.yaml` (`11` mesin state, `41` transisi), `role-permissions.yaml` (`PUBLIC` + `7` peran, `64` permissions, `1:1` OpenAPI), `11` fixture JSON (`22` skenario negatif), `ADR-001..010`, traceability lengkap, dan `10/10` cek validasi `K1–K10` lulus (`0` issue). |
+| **M0.1** | Final Handoff Consistency Patch | **`READY — M0_HANDOFF_CONSISTENCY_VERIFIED`** | 2026-11-10 ([M0_CHANGELOG.md](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_CHANGELOG.md)) | Penyelarasan akhir pra-B0/F0: `TanStack Router`, 48 nama tabel kanonis `DBD §4`, breakdown `95` operasi (`2` health / `7` public / `4` auth / `82` internal = `84` authenticated), `8` operasi wajib `Idempotency-Key`, `M0-CNF-05 = RESOLVED`, arah dependency Clean Architecture 4 layer (`ADR-002`), & struktur `B0` inkremental tanpa folder kosong (`ADR-001`). |
+
+---
+
+## Checkpoint M0 — Requirements & Contract Alignment
+
+### 1. Status & Ringkasan Penutupan M0
+- **Current Milestone:** `M0 — Requirements & Contract Alignment`
+- **Status Akhir M0:** **`READY — M0_CONTRACT_ALIGNMENT_VERIFIED`**
+- **Baseline Git Commit:** `b081695` (`branch: main`)
+- **Tanggal Penutupan M0:** `2026-11-10`
+- **Objective:** Menyusun fondasi kontrak tunggal (*Contract-First, One Source of Truth*) bagi backend FastAPI dan frontend React + TypeScript berdasarkan 6 dokumen V1.1 dan hasil D5 FigCraft tanpa menulis kode runtime ataupun mengubah dokumen baseline V1.1.
+- **Batasan & Keputusan `PENDING_SOP` Tetap Dipertahankan:**
+  - Keputusan `BSD-DEC-001..020` & `AFD §41` (`SOP-01..15`) tetap ditandai `CONFIRMED` / `SIMULATION_ONLY` / `PENDING_SOP` / `FUTURE` (khususnya `business_model_code = UNCONFIRMED` yang memblokir finalisasi keuangan nyata via `409 FIN_POLICY_UNCONFIRMED`, toleransi `1,5%` simulasi, grading `2%` simulasi, dan alokasi multi-petani).
+  - Tidak ada berkas pada `backend/`, `frontend/`, `alembic/`, `infra/`, `.figcraft`, `tokens.*`, maupun keenam dokumen baseline V1.1 yang dimodifikasi.
+
+### 2. Status Unit Kerja M0
+| Unit Kerja | Ruang Lingkup | Status |
+| :--- | :--- | :--- |
+| `M0-A Documentation` | Discovery, pembacaan penuh 6 dokumen V1.1, D4/D5 FigCraft, & `M0_DOCUMENT_AUDIT.md` | `PASS` |
+| `M0-B Domain Alignment` | Inventaris 11 modul, konflik `CNF-01..10`, `M0_DECISION_REGISTER.md`, & `ADR-001..010` | `PASS` |
+| `M0-C OpenAPI` | `contracts/openapi.v1.yaml` (OpenAPI `3.1.0`, `75` paths, `95` operations, `191` schemas) | `PASS` |
+| `M0-D State Catalog` | `contracts/state-catalog.yaml` (`11` mesin state persisten vs turunan/UI, `41` transisi) | `PASS` |
+| `M0-E Error Catalog` | `contracts/error-catalog.yaml` (`69` kode `MODULE_CATEGORY_DESCRIPTION`, HTTP map, `retryable`) | `PASS` |
+| `M0-F Role/Permission` | `contracts/role-permissions.yaml` (`PUBLIC` + `7` peran, `4` scopes, `SOD-01..06`, `BR-SYS-002`) | `PASS` |
+| `M0-G Fixtures` | `contracts/fixtures/*.json` (`11` dataset deterministik, `22` skenario negatif) + `README.md` | `PASS` |
+| `M0-H Validation` | `contracts/scripts/validate_contracts.py` + `contracts/tests/test_contracts.py` (`K1–K10`: `0` issues) & `M0_CONTRACT_VALIDATION_REPORT.md` | `PASS` |
+| `M0-I Final Handoff` | `M0_REQUIREMENT_TRACEABILITY.md`, `M0_CHANGELOG.md`, `M0_HANDOFF.md`, & checkpoint sign-off | `PASS` |
+
+### 3. Pengujian & Verifikasi yang Dijalankan
+- `python contracts/scripts/validate_contracts.py` -> `PASS` (`K1`–`K11` lulus seluruhnya, `TOTAL ISSUES: 0`).
+- `python -m unittest discover -s contracts/tests -v` -> `PASS` (`11` test cases `test_k1`..`test_k11` OK).
+- `npx --yes openapi-typescript contracts/openapi.v1.yaml -o <tmpdir>/openapi-types.d.ts` -> `exit code 0` (bagian terverifikasi dari `K8`).
+
+### 4. Artefak M0 & Langkah Berikutnya
+- **Artefak Kontrak (`contracts/`):** `openapi.v1.yaml`, `error-catalog.yaml`, `state-catalog.yaml`, `role-permissions.yaml`, `fixtures/README.md`, `fixtures/*.json` (`11` berkas), `scripts/validate_contracts.py`, `tests/test_contracts.py`.
+- **Artefak Dokumentasi M0 (`docs/m0/` & `docs/adr/`):** `M0_DOCUMENT_AUDIT.md`, `M0_DECISION_REGISTER.md`, `M0_REQUIREMENT_TRACEABILITY.md`, `M0_CONTRACT_VALIDATION_REPORT.md`, `M0_CHANGELOG.md`, `M0_HANDOFF.md`, serta `ADR-001`..`ADR-010` + `docs/adr/README.md`.
+- **Langkah Berikutnya (Sesuai IPD V1.1, Belum Dieksekusi pada M0/M0.1):**
+  1. Memulai paralelisme terkendali pada **Backend Track `B0 — Project Foundation`** (`main.py` + `core/` untuk DB/Alembic & Redis fail-closed, Request ID, global error handler, `/health/live` & `/health/ready`, architecture/infra tests — **tanpa scaffolding puluhan folder kosong modul**; modul ditambah inkremental mulai `B1` dengan 4 layer wajib `ADR-002`) dan **Frontend Track `F0 — Project Foundation`** (React + Vite + TypeScript strict + Tailwind v4 token D5 + **`TanStack Router`** 26 rute `AFD §36` + TanStack Query + `openapi-typescript` codegen).
+  2. Seluruh pengembang/agent track wajib merujuk `docs/m0/M0_HANDOFF.md` serta menjaga suite `K1–K11` tetap hijau sebelum pengajuan perubahan kontrak.
+
+---
+
+## Checkpoint M0.1 — Final Handoff Consistency Patch
+
+- **Status Akhir M0.1:** **`READY — M0_HANDOFF_CONSISTENCY_VERIFIED`** (`2026-11-10`)
+- **Ringkasan Koreksi yang Diverifikasi & Ditutup:**
+  1. **Router Frontend:** Ditegaskan **`TanStack Router`** di [`M0_HANDOFF.md`](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_HANDOFF.md) & checkpoint ini (selaras `TRD §3, §17` & `ADR-006`).
+  2. **Nama Entitas DBD (`48/48`):** Dikoreksi pada [`M0_REQUIREMENT_TRACEABILITY.md`](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_REQUIREMENT_TRACEABILITY.md) (`user_accounts`, `user_role_grants`, `receipt_weighing_revisions`, `delivery_order_lines`, `delivery_status_events`) serta seluruh 48 tabel `DBD §4` terindeks lengkap sesuai `DBD §4.11`.
+  3. **Hitungan Operasi OpenAPI (`95` ops):** Dikoreksi pada handoff & laporan (`2` health + `7` public + `2` auth bootstrap + `2` auth session + `82` internal bisnis/admin = `11` bebas login & `84` terautentikasi).
+  4. **Idempotency Operations (`8` ops):** Diselaraskan pada [`ADR-010`](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/adr/ADR-010-idempotency-concurrency-pending-sop.md), `M0_DECISION_REGISTER.md` (`M0-TECH-07`), traceability, & handoff untuk 8 operasi wajib `Idempotency-Key` (mewakili 7 kategori proses kritis `BSD §27.2`).
+  5. **Konsistensi Register (`M0-CNF-05`):** Diseragamkan **`RESOLVED`** di [`M0_DOCUMENT_AUDIT.md`](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_DOCUMENT_AUDIT.md), `M0_DECISION_REGISTER.md`, dan `M0_CHANGELOG.md`.
+  6. **Clean Architecture & Struktur Solo Dev:** Penegasan [`ADR-001`](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/adr/ADR-001-modular-monolith.md) & [`ADR-002`](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/adr/ADR-002-four-layer-clean-architecture.md) (4 layer per modul inkremental, dependency ke dalam via port & composition root wiring, bebas subfolder kosong di `B0`).
+  7. **Regresi Otomatis M0.1:** Suite `K1–K11` (`python contracts/scripts/validate_contracts.py` & `python -m unittest discover -s contracts/tests -v`) berjalan penuh dan lulus (`0` issue).
 
 ---
 
