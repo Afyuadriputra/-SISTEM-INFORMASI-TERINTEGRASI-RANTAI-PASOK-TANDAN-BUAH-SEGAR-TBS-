@@ -1,0 +1,288 @@
+[project]
+name = "agroniaga-tbs-backend"
+version = "0.1.0"
+description = "Backend Modular Monolith FastAPI — Sistem Informasi Terintegrasi Rantai Pasok TBS Perumda Tuah Sekata (Unit Agro Niaga)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "alembic>=1.14.0,<2.0.0",
+  "argon2-cffi>=23.1.0,<26.0.0",
+  "fastapi>=0.115.0,<1.0.0",
+  "psycopg[binary]>=3.2.0,<4.0.0",
+  "pydantic>=2.9.0,<3.0.0",
+  "pydantic-settings>=2.6.0,<3.0.0",
+  "python-multipart>=0.0.12,<1.0.0",
+  "redis>=5.2.0,<6.0.0",
+  "sqlalchemy>=2.0.36,<2.1.0",
+  "uvicorn[standard]>=0.32.0,<1.0.0",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.27.0,<1.0.0",
+  "hypothesis>=6.115.0,<7.0.0",
+  "import-linter>=2.1,<3.0",
+  "locust>=2.32.0,<3.0.0",
+  "pyright>=1.1.389,<2.0.0",
+  "pytest>=8.3.0,<9.0.0",
+  "pytest-asyncio>=0.24.0,<1.0.0",
+  "pyyaml>=6.0.2,<7.0.0",
+  "ruff>=0.7.0,<1.0.0",
+  "schemathesis>=3.38.0,<4.0.0",
+]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+  "error::DeprecationWarning",
+  "ignore:jsonschema\\.exceptions\\.RefResolutionError is deprecated:DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "tests", "alembic"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC", "S", "N", "W"]
+ignore = ["B008", "S104"]
+
+[tool.ruff.lint.per-file-ignores]
+"app/core/exceptions.py" = ["E501"]
+"tests/**" = ["S101", "S105", "S106", "E501"]
+"alembic/**" = ["I001"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "standard"
+include = ["app", "tests"]
+exclude = [".venv", "alembic"]
+
+[tool.importlinter]
+root_packages = ["app"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Core primitives and exceptions remain independent of HTTP, ORM, and Redis adapters"
+type = "forbidden"
+source_modules = [
+  "app.core.config",
+  "app.core.exceptions",
+  "app.core.idempotency_primitives",
+  "app.core.logging",
+  "app.core.schemas",
+  "app.core.security",
+  "app.core.weight_primitives",
+]
+forbidden_modules = [
+  "fastapi",
+  "sqlalchemy",
+  "redis",
+  "psycopg",
+  "alembic",
+  "app.core.health",
+  "app.core.middleware",
+  "app.main",
+]
+
+[[tool.importlinter.contracts]]
+name = "Database, audit, and Redis adapters must not import HTTP composition or middleware"
+type = "forbidden"
+source_modules = [
+  "app.core.audit",
+  "app.core.database",
+  "app.core.idempotency",
+  "app.core.redis",
+  "app.core.system_rules",
+]
+forbidden_modules = [
+  "fastapi",
+  "starlette",
+  "app.core.health",
+  "app.core.middleware",
+  "app.main",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside active domain modules"
+type = "layers"
+layers = [
+  "app.modules.identity_access.presentation",
+  "app.modules.identity_access.application",
+  "app.modules.identity_access.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside master_data"
+type = "layers"
+layers = [
+  "app.modules.master_data.presentation",
+  "app.modules.master_data.application",
+  "app.modules.master_data.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside pricing"
+type = "layers"
+layers = [
+  "app.modules.pricing.presentation",
+  "app.modules.pricing.application",
+  "app.modules.pricing.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside public_portal"
+type = "layers"
+layers = [
+  "app.modules.public_portal.presentation",
+  "app.modules.public_portal.application",
+  "app.modules.public_portal.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside tbs_receiving"
+type = "layers"
+layers = [
+  "app.modules.tbs_receiving.presentation",
+  "app.modules.tbs_receiving.application",
+  "app.modules.tbs_receiving.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside contracts"
+type = "layers"
+layers = [
+  "app.modules.contracts.presentation",
+  "app.modules.contracts.application",
+  "app.modules.contracts.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside logistics"
+type = "layers"
+layers = [
+  "app.modules.logistics.presentation",
+  "app.modules.logistics.application",
+  "app.modules.logistics.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside files"
+type = "layers"
+layers = [
+  "app.modules.files.presentation",
+  "app.modules.files.application",
+  "app.modules.files.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside mill_weighing"
+type = "layers"
+layers = [
+  "app.modules.mill_weighing.presentation",
+  "app.modules.mill_weighing.application",
+  "app.modules.mill_weighing.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside reconciliation"
+type = "layers"
+layers = [
+  "app.modules.reconciliation.presentation",
+  "app.modules.reconciliation.application",
+  "app.modules.reconciliation.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside finance"
+type = "layers"
+layers = [
+  "app.modules.finance.presentation",
+  "app.modules.finance.application",
+  "app.modules.finance.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside reporting"
+type = "layers"
+layers = [
+  "app.modules.reporting.presentation",
+  "app.modules.reporting.application",
+  "app.modules.reporting.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Clean Architecture four-layer isolation inside admin"
+type = "layers"
+layers = [
+  "app.modules.admin.presentation",
+  "app.modules.admin.application",
+  "app.modules.admin.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "Domain and application layers must not import infrastructure adapters"
+type = "forbidden"
+source_modules = [
+  "app.modules.identity_access.domain",
+  "app.modules.identity_access.application",
+  "app.modules.identity_access.presentation",
+  "app.modules.master_data.domain",
+  "app.modules.master_data.application",
+  "app.modules.master_data.presentation",
+  "app.modules.pricing.domain",
+  "app.modules.pricing.application",
+  "app.modules.pricing.presentation",
+  "app.modules.public_portal.domain",
+  "app.modules.public_portal.application",
+  "app.modules.public_portal.presentation",
+  "app.modules.tbs_receiving.domain",
+  "app.modules.tbs_receiving.application",
+  "app.modules.tbs_receiving.presentation",
+  "app.modules.contracts.domain",
+  "app.modules.contracts.application",
+  "app.modules.contracts.presentation",
+  "app.modules.logistics.domain",
+  "app.modules.logistics.application",
+  "app.modules.logistics.presentation",
+  "app.modules.files.domain",
+  "app.modules.files.application",
+  "app.modules.files.presentation",
+  "app.modules.mill_weighing.domain",
+  "app.modules.mill_weighing.application",
+  "app.modules.mill_weighing.presentation",
+  "app.modules.reconciliation.domain",
+  "app.modules.reconciliation.application",
+  "app.modules.reconciliation.presentation",
+  "app.modules.finance.domain",
+  "app.modules.finance.application",
+  "app.modules.finance.presentation",
+  "app.modules.reporting.domain",
+  "app.modules.reporting.application",
+  "app.modules.reporting.presentation",
+  "app.modules.admin.domain",
+  "app.modules.admin.application",
+  "app.modules.admin.presentation",
+]
+forbidden_modules = [
+  "app.modules.identity_access.infrastructure",
+  "app.modules.master_data.infrastructure",
+  "app.modules.pricing.infrastructure",
+  "app.modules.public_portal.infrastructure",
+  "app.modules.tbs_receiving.infrastructure",
+  "app.modules.contracts.infrastructure",
+  "app.modules.logistics.infrastructure",
+  "app.modules.files.infrastructure",
+  "app.modules.mill_weighing.infrastructure",
+  "app.modules.reconciliation.infrastructure",
+  "app.modules.finance.infrastructure",
+  "app.modules.reporting.infrastructure",
+  "app.modules.admin.infrastructure",
+]
