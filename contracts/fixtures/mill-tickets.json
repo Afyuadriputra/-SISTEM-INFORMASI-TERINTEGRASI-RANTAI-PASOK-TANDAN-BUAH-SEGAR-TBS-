@@ -1,0 +1,98 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Tiket timbang PKS current terverifikasi (WB-PKC-2026-9941 = 9900.000 kg), riwayat revisi versi 1->2, dan skenario cross-mill."
+  },
+  "mill_weighing_tickets": [
+    {
+      "id": "80000000-0000-4000-8000-000000000001",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "ticket_number": "WB-PKC-2026-9941",
+      "revision_number": 2,
+      "previous_ticket_id": "80000000-0000-4000-8000-000000000002",
+      "gross_weight_kg": "17340.000",
+      "tare_weight_kg": "7440.000",
+      "net_weight_kg": "9900.000",
+      "weighed_at": "2026-11-10T03:45:00Z",
+      "verified_at": "2026-11-10T03:50:00Z",
+      "verified_by": "10000000-0000-4000-8000-000000000009",
+      "is_current": true,
+      "status": "VERIFIED",
+      "proof_file_id": "a0000000-0000-4000-8000-000000000902",
+      "correction_reason": "Koreksi input angka tara dari slip timbangan asli #WB-PKC-2026-9941.",
+      "grading_items": [
+        {
+          "id": "80000000-0000-4000-8000-000000000101",
+          "grading_category": "Sortasi PKS (Simulasi)",
+          "deduction_type": "WEIGHT_PERCENT",
+          "deduction_value": "2.0000",
+          "calculation_basis": "MILL_NET_WEIGHT",
+          "is_simulation": true,
+          "notes": "Simulasi catatan mutu pabrik 2% terpisah dari berat netto timbang."
+        }
+      ],
+      "created_at": "2026-11-10T03:45:00Z"
+    },
+    {
+      "id": "80000000-0000-4000-8000-000000000002",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000001",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "ticket_number": "WB-PKC-2026-9941",
+      "revision_number": 1,
+      "previous_ticket_id": null,
+      "gross_weight_kg": "17340.000",
+      "tare_weight_kg": "7490.000",
+      "net_weight_kg": "9850.000",
+      "weighed_at": "2026-11-10T03:40:00Z",
+      "verified_at": null,
+      "verified_by": null,
+      "is_current": false,
+      "status": "DRAFT",
+      "proof_file_id": "a0000000-0000-4000-8000-000000000902",
+      "correction_reason": null,
+      "grading_items": [],
+      "created_at": "2026-11-10T03:40:00Z"
+    },
+    {
+      "id": "80000000-0000-4000-8000-000000000098",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000098",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "ticket_number": "WB-PKC-2026-9939",
+      "revision_number": 1,
+      "previous_ticket_id": null,
+      "gross_weight_kg": "17040.000",
+      "tare_weight_kg": "7440.000",
+      "net_weight_kg": "9600.000",
+      "weighed_at": "2026-11-09T08:30:00Z",
+      "verified_at": "2026-11-09T08:45:00Z",
+      "verified_by": "10000000-0000-4000-8000-000000000009",
+      "is_current": true,
+      "status": "VERIFIED",
+      "proof_file_id": "a0000000-0000-4000-8000-000000000902",
+      "correction_reason": null,
+      "grading_items": [],
+      "created_at": "2026-11-09T08:30:00Z"
+    },
+    {
+      "id": "80000000-0000-4000-8000-000000000099",
+      "delivery_order_id": "70000000-0000-4000-8000-000000000099",
+      "mill_id": "30000000-0000-4000-8000-000000000001",
+      "ticket_number": "WB-PKC-2026-9940",
+      "revision_number": 1,
+      "previous_ticket_id": null,
+      "gross_weight_kg": "17590.000",
+      "tare_weight_kg": "7440.000",
+      "net_weight_kg": "10150.000",
+      "weighed_at": "2026-11-09T10:30:00Z",
+      "verified_at": "2026-11-09T10:45:00Z",
+      "verified_by": "10000000-0000-4000-8000-000000000009",
+      "is_current": true,
+      "status": "VERIFIED",
+      "proof_file_id": "a0000000-0000-4000-8000-000000000902",
+      "correction_reason": null,
+      "grading_items": [],
+      "created_at": "2026-11-09T10:30:00Z"
+    }
+  ]
+}
