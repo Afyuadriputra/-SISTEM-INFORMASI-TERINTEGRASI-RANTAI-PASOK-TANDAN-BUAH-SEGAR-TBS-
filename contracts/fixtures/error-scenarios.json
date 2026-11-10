@@ -1,0 +1,271 @@
+{
+  "fixture_meta": {
+    "policy_classification": "CONFIRMED",
+    "note": "Katalog skenario negatif & boundary wajib (task2.md §19 + BIZ-001..030) dengan respons ErrorResponse kanonis."
+  },
+  "scenarios": [
+    {
+      "scenario_id": "NEG-01_PUBLIC_FARMER_DATA_DENIED",
+      "actor": "PUBLIC",
+      "operation_id": "listFarmers",
+      "expected_http_status": 401,
+      "error_response": {
+        "success": false,
+        "error": { "code": "AUTH_REQUIRED", "message": "Silakan masuk terlebih dahulu untuk mengakses layanan ini.", "details": null },
+        "request_id": "req_neg_001"
+      }
+    },
+    {
+      "scenario_id": "NEG-02_CROSS_COOP_ACCESS_DENIED",
+      "actor": "COOPERATIVE_OPERATOR (KOP-01)",
+      "operation_id": "getFarmer",
+      "target_id": "40000000-0000-4000-8000-000000000105",
+      "expected_http_status": 403,
+      "error_response": {
+        "success": false,
+        "error": { "code": "AUTH_SCOPE_FORBIDDEN", "message": "Anda tidak berwenang mengakses data di luar cakupan organisasi Anda.", "details": null },
+        "request_id": "req_neg_002"
+      }
+    },
+    {
+      "scenario_id": "NEG-03_CROSS_MILL_TICKET_DENIED",
+      "actor": "MILL_OPERATOR (MILL-LGM-02)",
+      "operation_id": "verifyDeliveryOrderQr",
+      "expected_http_status": 403,
+      "error_response": {
+        "success": false,
+        "error": { "code": "MILL_EDO_MILL_MISMATCH", "message": "Dokumen e-DO ini tidak ditujukan untuk PKS Anda.", "details": null },
+        "request_id": "req_neg_003"
+      }
+    },
+    {
+      "scenario_id": "NEG-04_ADMIN_APPROVAL_BLOCKED_BR_SYS_002",
+      "actor": "SYSTEM_ADMIN",
+      "operation_id": "approveOrRejectInvoicePayment",
+      "expected_http_status": 403,
+      "error_response": {
+        "success": false,
+        "error": { "code": "AUTH_OPERATION_FORBIDDEN", "message": "Peran Anda tidak diperbolehkan melakukan tindakan persetujuan atau perubahan operasional ini.", "details": null },
+        "request_id": "req_neg_004"
+      }
+    },
+    {
+      "scenario_id": "NEG-05_UNVERIFIED_PRICE_PUBLISH_REJECTED",
+      "actor": "PERUMDA_OPERATIONS",
+      "operation_id": "publishPrice",
+      "target_id": "20000000-0000-4000-8000-000000000105",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "PRICE_NOT_VERIFIED", "message": "Harga belum diverifikasi sehingga belum dapat dipublikasikan.", "details": { "current_status": "PENDING_VERIFICATION" } },
+        "request_id": "req_neg_005"
+      }
+    },
+    {
+      "scenario_id": "NEG-06_TARE_EXCEEDS_GROSS",
+      "actor": "COOPERATIVE_OPERATOR",
+      "operation_id": "recordReceiptWeighing",
+      "request_payload": { "gross_weight_kg": "8000.000", "tare_weight_kg": "8500.000", "version": 1 },
+      "expected_http_status": 422,
+      "error_response": {
+        "success": false,
+        "error": {
+          "code": "TBS_INVALID_WEIGHT",
+          "message": "Nilai timbangan tidak valid: berat tara tidak boleh melebihi berat bruto dan tidak boleh bernilai negatif.",
+          "details": [{ "field": "tare_weight_kg", "reason": "Tara (8500.000) melebihi bruto (8000.000).", "code": "TBS_INVALID_WEIGHT" }]
+        },
+        "request_id": "req_neg_006"
+      }
+    },
+    {
+      "scenario_id": "NEG-07_RECEIPT_DOUBLE_ALLOCATION",
+      "actor": "COOPERATIVE_OPERATOR",
+      "operation_id": "issueDeliveryOrder",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": {
+          "code": "LOG_DELIVERY_ALREADY_ASSIGNED",
+          "message": "Sebagian muatan penerimaan sudah dialokasikan ke e-DO aktif lain dan tidak dapat dikirim ganda.",
+          "details": { "conflicting_receipt_ids": ["50000000-0000-4000-8000-000000000001"] }
+        },
+        "request_id": "req_neg_007"
+      }
+    },
+    {
+      "scenario_id": "NEG-08_QUOTA_EXCEEDED",
+      "actor": "PERUMDA_OPERATIONS",
+      "operation_id": "issueDeliveryOrder",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": {
+          "code": "CONTRACT_QUOTA_EXCEEDED",
+          "message": "Pengiriman belum dapat diterbitkan karena sisa kuota kontrak tidak mencukupi.",
+          "details": { "available_quota_kg": "25000.000", "requested_weight_kg": "30000.000" }
+        },
+        "request_id": "req_neg_008"
+      }
+    },
+    {
+      "scenario_id": "NEG-09_IDEMPOTENCY_KEY_PAYLOAD_CONFLICT",
+      "actor": "COOPERATIVE_OPERATOR",
+      "operation_id": "issueDeliveryOrder",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "IDM_KEY_CONFLICT_PAYLOAD_MISMATCH", "message": "Kunci idempotensi permintaan sudah digunakan untuk data transaksi yang berbeda. Muat ulang formulir.", "details": null },
+        "request_id": "req_neg_009"
+      }
+    },
+    {
+      "scenario_id": "NEG-10_DUPLICATE_MILL_TICKET",
+      "actor": "MILL_OPERATOR",
+      "operation_id": "createMillTicket",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "MILL_DUPLICATE_TICKET", "message": "Nomor tiket timbang sudah terdaftar. Periksa kembali nomor tiket sebelum menyimpan.", "details": { "ticket_number": "WB-PKC-2026-9941" } },
+        "request_id": "req_neg_010"
+      }
+    },
+    {
+      "scenario_id": "NEG-11_DISPUTE_HOLD_BLOCKS_INVOICE",
+      "actor": "PERUMDA_FINANCE",
+      "operation_id": "createInvoiceDraft",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "FIN_DISPUTE_HOLD_BLOCKED", "message": "Transaksi masih dalam pemeriksaan sengketa sehingga faktur atau pembayaran final ditahan.", "details": { "reconciliation_status": "DISPUTE_HOLD" } },
+        "request_id": "req_neg_011"
+      }
+    },
+    {
+      "scenario_id": "NEG-12_MAKER_CANNOT_SELF_APPROVE",
+      "actor": "DIRECTOR / PERUMDA_FINANCE",
+      "operation_id": "approveOrRejectInvoicePayment",
+      "expected_http_status": 403,
+      "error_response": {
+        "success": false,
+        "error": { "code": "AUTH_CONFLICT_OF_DUTIES", "message": "Tindakan pemeriksaan atau persetujuan harus dilakukan oleh petugas berwenang yang berbeda dari pembuat data.", "details": null },
+        "request_id": "req_neg_012"
+      }
+    },
+    {
+      "scenario_id": "NEG-13_UNCONFIRMED_MODEL_BLOCKS_FINAL_FINANCE",
+      "actor": "PERUMDA_FINANCE",
+      "operation_id": "issueInvoice",
+      "target_id": "a0000000-0000-4000-8000-000000000003",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "FIN_POLICY_UNCONFIRMED", "message": "Finalisasi keuangan ditahan karena klasifikasi model usaha kontrak (Principal/Agent) belum disahkan.", "details": { "business_model_code": "UNCONFIRMED", "pending_decision_id": "BSD-DEC-001" } },
+        "request_id": "req_neg_013"
+      }
+    },
+    {
+      "scenario_id": "NEG-14_PARTIAL_PAYMENT_REJECTED_IN_MVP",
+      "actor": "PERUMDA_FINANCE",
+      "operation_id": "recordPaymentEvidence",
+      "expected_http_status": 422,
+      "error_response": {
+        "success": false,
+        "error": { "code": "PAY_PARTIAL_NOT_SUPPORTED", "message": "Pembayaran sebagian belum didukung pada kebijakan sistem saat ini. Masukkan nominal pelunasan penuh sesuai nilai faktur.", "details": { "invoice_total_amount": "26730000.00", "submitted_amount": "10000000.00" } },
+        "request_id": "req_neg_014"
+      }
+    },
+    {
+      "scenario_id": "NEG-15_CSRF_TOKEN_INVALID",
+      "actor": "PERUMDA_OPERATIONS",
+      "operation_id": "createPriceDraft",
+      "expected_http_status": 403,
+      "error_response": {
+        "success": false,
+        "error": { "code": "AUTH_CSRF_INVALID", "message": "Permintaan tidak dapat diverifikasi secara aman. Muat ulang halaman lalu coba kembali.", "details": null },
+        "request_id": "req_neg_015"
+      }
+    },
+    {
+      "scenario_id": "NEG-16_SESSION_EXPIRED",
+      "actor": "COOPERATIVE_OPERATOR",
+      "operation_id": "getCurrentUser",
+      "expected_http_status": 401,
+      "error_response": {
+        "success": false,
+        "error": { "code": "AUTH_SESSION_EXPIRED", "message": "Sesi Anda telah berakhir. Silakan masuk kembali.", "details": null },
+        "request_id": "req_neg_016"
+      }
+    },
+    {
+      "scenario_id": "NEG-17_PAIRED_COORDINATES_VALIDATION_422",
+      "actor": "PERUMDA_OPERATIONS",
+      "operation_id": "createMill",
+      "request_payload": { "latitude": "0.402100", "longitude": null },
+      "expected_http_status": 422,
+      "error_response": {
+        "success": false,
+        "error": {
+          "code": "VAL_INVALID_COORDINATES",
+          "message": "Koordinat lokasi tidak valid. Latitude (-90 s.d. 90) dan Longitude (-180 s.d. 180) wajib diisi berpasangan.",
+          "details": [{ "field": "longitude", "reason": "Longitude wajib diisi saat Latitude terisi.", "code": "VAL_INVALID_COORDINATES" }]
+        },
+        "request_id": "req_neg_017"
+      }
+    },
+    {
+      "scenario_id": "NEG-18_STALE_VERSION_OPTIMISTIC_LOCK",
+      "actor": "COOPERATIVE_OPERATOR",
+      "operation_id": "updateFarmer",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "MD_STALE_RECORD_VERSION", "message": "Data telah diperbarui oleh pengguna lain. Muat ulang data terbaru sebelum menyimpan.", "details": { "expected_version": 1, "current_version": 2 } },
+        "request_id": "req_neg_018"
+      }
+    },
+    {
+      "scenario_id": "NEG-19_BACKEND_DEPENDENCY_503_AND_TIMEOUT_504",
+      "actor": "ANY",
+      "operation_id": "getReadinessHealth",
+      "expected_http_status": 503,
+      "error_response": {
+        "success": false,
+        "error": { "code": "SYS_DEPENDENCY_UNAVAILABLE", "message": "Layanan sistem sedang mengalami gangguan sementara. Silakan coba lagi beberapa saat atau laporkan kode referensi.", "details": null },
+        "request_id": "req_8f2a1c90"
+      }
+    },
+    {
+      "scenario_id": "NEG-20_INVALID_LOGIN_CREDENTIALS",
+      "actor": "PUBLIC",
+      "operation_id": "loginUser",
+      "expected_http_status": 401,
+      "error_response": {
+        "success": false,
+        "error": { "code": "AUTH_INVALID_CREDENTIALS", "message": "Nama pengguna atau kata sandi tidak valid.", "details": null },
+        "request_id": "req_neg_020"
+      }
+    },
+    {
+      "scenario_id": "NEG-21_NEGATIVE_WEIGHT_DIFFERENCE_HOLD",
+      "actor": "PERUMDA_OPERATIONS",
+      "operation_id": "calculateReconciliation",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "REC_NEGATIVE_DIFFERENCE_HOLD", "message": "Berat PKS lebih besar daripada berat pengiriman asal. Kasus ditahan untuk investigasi selisih negatif.", "details": { "reconciliation_id": "90000000-0000-4000-8000-000000000104" } },
+        "request_id": "req_neg_021"
+      }
+    },
+    {
+      "scenario_id": "NEG-22_RECEIPT_LOCKED_AFTER_ALLOCATION",
+      "actor": "COOPERATIVE_OPERATOR",
+      "operation_id": "recordReceiptWeighing",
+      "expected_http_status": 409,
+      "error_response": {
+        "success": false,
+        "error": { "code": "TBS_RECEIPT_LOCKED", "message": "Penerimaan TBS sudah dialokasikan atau dikirim pada e-DO dan tidak dapat ditimbang ulang.", "details": { "receipt_id": "50000000-0000-4000-8000-000000000001" } },
+        "request_id": "req_neg_022"
+      }
+    }
+  ]
+}
