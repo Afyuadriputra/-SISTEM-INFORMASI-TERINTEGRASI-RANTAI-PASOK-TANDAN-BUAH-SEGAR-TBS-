@@ -5,10 +5,10 @@
 
 ### PERUMDA TUAH SEKATA — UNIT AGRO NIAGA
 
-**Versi:** 1.0 — Database & UX Data Architecture Baseline
+**Versi:** 1.1 — Database & UX Data Architecture Baseline
 **Tanggal:** 10 November 2026
 **Status:** Draft Rancangan Database dan Pendukung UI/UX
-**Dokumen Induk:** PRD V1.0, TRD V1.0, AFD V1.0
+**Dokumen Induk:** PRD V1.1, TRD V1.1, AFD V1.1
 **Database:** PostgreSQL 17+
 **ORM:** SQLAlchemy 2.x
 **Migration:** Alembic
@@ -2696,10 +2696,10 @@ Antarmuka dinyatakan memenuhi baseline apabila:
 
 | Dokumen        | Keterkaitan                                                           |
 | -------------- | --------------------------------------------------------------------- |
-| PRD V1.0       | Sumber kebutuhan produk dan data                                      |
-| TRD V1.0       | Sumber arsitektur backend, database, caching, security, dan frontend  |
-| AFD V1.0       | Sumber alur aplikasi dan state transition                             |
-| DBD V1.0       | Desain entitas, relasi, integritas, penyimpanan, dan dukungan data UI |
+| PRD V1.1       | Sumber kebutuhan produk dan data                                      |
+| TRD V1.1       | Sumber arsitektur backend, database, caching, security, dan frontend  |
+| AFD V1.1       | Sumber alur aplikasi dan state transition                             |
+| DBD V1.1       | Desain entitas, relasi, integritas, penyimpanan, dan dukungan data UI |
 | BSD berikutnya | Ketentuan rumus dan kebijakan bisnis final                            |
 | IPD berikutnya | Tahapan implementasi, migrasi, pengujian, dan sign-off                |
 
@@ -2754,7 +2754,7 @@ Jika terdapat perbedaan, keputusan harus dicatat dan diperbarui secara konsisten
 
 # 40. KESIMPULAN
 
-Database Design Document V1.0 menetapkan rancangan basis data relasional untuk Sistem Informasi Terintegrasi Rantai Pasok TBS pada Perumda Tuah Sekata, Unit Agro Niaga.
+Database Design Document V1.1 menetapkan rancangan basis data relasional untuk Sistem Informasi Terintegrasi Rantai Pasok TBS pada Perumda Tuah Sekata, Unit Agro Niaga.
 
 PostgreSQL digunakan sebagai database utama untuk menjamin integritas, keterlacakan, dan konsistensi transaksi.
 
@@ -2772,8 +2772,39 @@ Desain UI/UX harus mengutamakan kemudahan penggunaan, keterbacaan, aksesibilitas
 
 Rancangan database dan kebutuhan antarmuka dalam dokumen ini menjadi dasar implementasi yang harus diselaraskan dengan aturan bisnis final dalam BSD.
 
-**STATUS: DBD V1.0 — DATABASE & UX DATA ARCHITECTURE BASELINE**
+**STATUS: DBD V1.1 — DATABASE & UX DATA ARCHITECTURE BASELINE**
 
 **DOKUMEN SELANJUTNYA: BUSINESS SYSTEM DOCUMENT (BSD)**
 
-**Akhir Dokumen — Database Design Document V1.0**
+**Akhir Dokumen — Database Design Document V1.1**
+
+# 41. INCREMENTAL DATABASE BASELINE V1.1
+
+Inventaris 48 nama pada Bagian 4 adalah kandidat model logis, bukan instruksi membuat 48 tabel pada migrasi pertama. Tabel dikerjakan bersama milestone modul pemiliknya. Integritas, auditability, dan keselamatan transaksi tetap wajib.
+
+## 41.1 Core MVP Tables
+
+Tabel inti untuk identitas dan alur demo minimum: `user_accounts`, `roles`, `permissions`, `role_permissions`, `user_role_grants`, `user_access_scopes`, `auth_sessions`; master aktor: `parties`, `farmers`, `farms`, `cooperatives`, `cooperative_memberships`, `mill_companies`, `mills`; harga: `price_sources`, `price_categories`, `mill_price_quotes`, `price_verification_events`; penerimaan: `tbs_receipts`, `receipt_weighing_revisions`, `receipt_grading_items`; kontrak/kuota/e-DO: `trade_contracts`, `contract_quota_periods`, `quota_reservations`, `delivery_orders`, `delivery_order_lines`, `delivery_status_events`; PKS/reconciliation/keuangan: `mill_weighing_tickets`, `mill_grading_items`, `reconciliation_cases`, `dispute_reviews`, `farmer_settlement_allocations`, `invoices`, `invoice_lines`, `payment_approvals`, `payment_records`; kontrol minimum: `audit_events`, `idempotency_records`.
+
+Kelompok tersebut tetap dijadwalkan per dependensi, bukan satu migrasi besar. Jika prototipe mendemonstrasikan pembayaran, catat jenis arus masuk/keluar dan statusnya secara eksplisit tanpa menyamakan status pembayaran dengan timbang.
+
+## 41.2 Supporting Tables Added by Milestone
+
+Tambahkan sesuai fitur yang benar-benar dikerjakan: `perumda_offices`, `vehicles`, `drivers` (master/logistik); `disbun_reference_prices` (harga acuan); `file_assets` (lampiran dengan kontrol akses); `system_rule_versions` (snapshot versi aturan bila diperlukan untuk reproduksi historis); `outbox_events` (hanya bila integrasi/asinkron memerlukannya); `user_notifications` (notifikasi dalam aplikasi); `public_pages` dan `public_notices` (bila konten perlu dikelola dari aplikasi).
+
+## 41.3 Deferred/Conditional
+
+Tidak ada nama tabel dari inventaris 48 yang otomatis dibuang. Tabel pendukung di atas bersyarat terhadap scope. Integrasi eksternal, workflow notifikasi, outbox, konten CMS, dan storage tambahan ditunda sampai milestone terkait menetapkan use case dan acceptance criteria. Tinjau kandidat lain bersama pemilik modul bila tidak dibutuhkan MVP; perubahan harus memperbarui traceability dan memakai migrasi aman.
+
+## 41.4 Migrasi dan Konsistensi Bisnis
+
+- Buat migrasi Alembic bersama milestone data; jalankan upgrade dan integration test serta tinjau downgrade bila aman. Jangan membuat seluruh skema di awal.
+- FK, unique/check constraints, indeks berbasis query, transaksi, dan concurrency control tetap wajib untuk aturan kritis.
+- Harga transaksi, berat, grading, toleransi, dan versi rule yang dipakai disimpan sebagai snapshot/referensi immutable agar perubahan harga publik atau aturan baru tidak mengubah histori.
+- Rekonsiliasi menyimpan kasus dan riwayat keputusan/ulangan. Alokasi multi-petani dapat ditelusuri ke penerimaan serta metode yang disahkan; formula simulasi bukan SOP.
+- Pembayaran memiliki arah (masuk/keluar), pihak, referensi, nominal presisi finansial, verifikasi/approval dan status terpisah dari timbang. Tidak ada asumsi transfer otomatis.
+- Idempotency dan constraint mencegah efek ganda; transaksi dan locking/strategi concurrency menjaga kuota serta alokasi.
+
+## 41.5 Batas Panduan UI
+
+Data UI mendukung loading, empty, error, success, validasi, dan aksesibilitas. Atomic Design lima level, 25 prinsip UX, golden ratio fleksibel, dan micro-interactions dijelaskan pada TRD sebagai pedoman visual. DBD menetapkan kebutuhan data dan tidak menduplikasi panduan UI.

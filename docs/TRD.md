@@ -5,10 +5,10 @@
 
 ### PERUMDA TUAH SEKATA — UNIT AGRO NIAGA
 
-**Versi:** 1.0 — Technical Architecture Baseline
+**Versi:** 1.1 — Technical Architecture Baseline
 **Tanggal:** 10 November 2026
 **Status:** Draft Rancangan Teknis
-**Dokumen Induk:** PRD V1.0
+**Dokumen Induk:** PRD V1.1
 **Pendekatan Arsitektur:** Modular Monolith + Clean Architecture
 **Backend:** Python, FastAPI, PostgreSQL, Redis
 **Frontend:** React, TypeScript, Vite, Tailwind CSS
@@ -2368,7 +2368,7 @@ Perancangan mempertahankan dua lingkungan penggunaan, yaitu Portal Publik tanpa 
 
 Seluruh rancangan diarahkan untuk mendukung pengembangan prototipe yang terukur, aman, memiliki kinerja yang baik, dan dapat dievaluasi melalui metodologi DSRM pada penelitian tesis.
 
-**Status Dokumen: TRD V1.0 — TECHNICAL ARCHITECTURE BASELINE**
+**Status Dokumen: TRD V1.1 — TECHNICAL ARCHITECTURE BASELINE**
 
 **Dokumen Selanjutnya: Application Flow Document (AFD).**
 
@@ -2393,4 +2393,56 @@ Seluruh rancangan diarahkan untuk mendukung pengembangan prototipe yang terukur,
 - OWASP Cheat Sheet Series — https://cheatsheetseries.owasp.org/
 - OWASP ASVS — https://owasp.org/www-project-application-security-verification-standard/
 
-**Akhir Dokumen — Technical Requirements Document V1.0**
+**Akhir Dokumen — Technical Requirements Document V1.1**
+
+# 33. SOLO DEVELOPER ARCHITECTURE PRINCIPLES V1.1
+
+Bagian ini mengikat pilihan teknis. Jika daftar tool atau quality gate sebelumnya menyatakan komponen opsional sebagai wajib, klasifikasi di sini yang berlaku.
+
+## 33.1 Prinsip Implementasi
+
+- **Modular Monolith + Clean Architecture + SOLID** tetap wajib. Setiap modul bisnis memiliki `domain/`, `application/`, `infrastructure/`, dan `presentation/` di dalam modul tersebut.
+- Terapkan SOLID secara pragmatis: tanggung jawab jelas, domain bebas HTTP/ORM, dependency inversion pada batas yang memberi manfaat pengujian atau variasi. Buat interface hanya bila dibutuhkan; hindari generic repository, inheritance, wrapper, factory, dan container tanpa tanggung jawab nyata.
+- Struktur ringan: entities/rules pada Domain, use cases pada Application, ORM/repository pada Infrastructure, route/schema pada Presentation. Tambah file berdasarkan kebutuhan nyata, bukan folder kosong.
+- Dependency mengarah Presentation → Application → Domain; Infrastructure mengimplementasikan port yang diperlukan. Wiring eksplisit pada composition root dan FastAPI dependencies cukup sebagai DI baseline.
+- `core` hanya untuk konfigurasi, session database, security infrastructure, logging, middleware, error, cache utility, dan primitive lintas modul. Business logic tetap dimiliki modul.
+- Pertahankan PostgreSQL, SQLAlchemy, Alembic, constraint, transaksi, pooling, dan migrasi incremental. Optimasi berdasarkan profiling: kebenaran query, indeks relevan, pagination, transaksi, concurrency, lalu cache.
+
+Contoh ilustratif: `backend/app/modules/pricing/{domain,application,infrastructure,presentation}/`. Struktur ini tidak mewajibkan file atau folder kosong.
+
+## 33.2 Security dan Observability Baseline
+
+Tetap wajib: server-side session, cookie HttpOnly, CSRF protection, RBAC dan scope authorization, Argon2id, validasi input, rate limiting, least privilege, secure file handling, serta audit transaksi penting. Kegagalan cache tidak boleh melewati autentikasi atau mengubah hasil transaksi.
+
+Middleware minimum: Request ID, HTTP access log terstruktur, durasi, status, module/error code, exception handler, health checks, security event log, dan business audit trail. Jangan log password, token, cookie, rekening, PII lengkap, atau payload sensitif. Request ID dapat digunakan pengguna untuk menelusuri error.
+
+`structlog` atau logging terstruktur setara adalah baseline. Prometheus, Grafana, Loki, OpenTelemetry, dan tracing backend ditambahkan saat manfaat operasional terukur; bukan prasyarat prototipe lokal.
+
+## 33.3 Klasifikasi Teknologi
+
+| Status | Teknologi / kemampuan | Ketentuan |
+| --- | --- | --- |
+| Required | FastAPI, PostgreSQL, SQLAlchemy, Alembic, React, TypeScript, Vite, Atomic Design, OpenAPI | Stack baseline dan kontrak bersama |
+| Required | Pydantic, pytest, Ruff, structured logging, session security, migrations | Terapkan seperlunya; konfigurasi dan lockfile minimal |
+| Conditional | Redis, HTTPX, MapLibre, TanStack Table, satu chart library, object storage, background worker | Hanya bila use case tersedia; aplikasi dan tes dasar tetap berjalan tanpa cache Redis |
+| Conditional | TanStack Query, React Hook Form, Zod, router pilihan, shadcn/ui, Lucide, Vitest, React Testing Library, Playwright, MSW | Pilih sesuai kebutuhan; hindari duplikasi fungsi |
+| Conditional | Zustand | Hanya jika shared client state tidak nyaman ditangani lokal/server state |
+| Deferred | Prometheus/Grafana/Loki/OpenTelemetry stack, HA kompleks, bank settlement otomatis | Tunda sampai kebutuhan terukur dan disetujui |
+
+Jangan gunakan dua library chart atau state management untuk fungsi sama. Coverage 80% bukan gate universal; prioritaskan tes aturan kritis.
+
+## 33.4 Redis dan Database
+
+PostgreSQL adalah source of truth. Redis didukung sebagai optimasi opsional untuk kandidat seperti harga publik, direktori PKS, atau agregasi dashboard setelah manfaat diukur. Cache memiliki TTL, invalidation, timestamp, dan fallback aman. Kegagalan Redis tidak membuat transaksi hilang atau memperlonggar otorisasi.
+
+## 33.5 Frontend dan UX
+
+React + TypeScript menggunakan Feature-Based Organization dan Atomic Design lima level: Atoms (tanpa business logic), Molecules, Organisms, Templates, Pages. Komponen satu fitur tinggal di fitur tersebut; shared component hanya untuk penggunaan lintas fitur. Backend menjadi sumber kebenaran aturan bisnis.
+
+Pertahankan 25 prinsip UX, golden ratio sebagai pedoman komposisi fleksibel, micro-interactions fungsional, mobile-first Portal Publik, dashboard internal responsif, accessibility, reduced motion, serta loading/empty/error/success state. Terapkan berdasarkan relevansi, bukan checklist mekanis setiap komponen.
+
+## 33.6 Testing dan Quality Gates
+
+Backend memprioritaskan domain unit, use case, database integration, API contract, auth/scope, concurrency pada operasi kritis, dan end-to-end. Frontend memprioritaskan typecheck, interaksi/form penting, MSW workflow, browser journey utama, responsive/accessibility, dan production build. Fokus risiko tinggi: harga, berat, grading, kontrak, kuota, e-DO, rekonsiliasi, settlement, pembayaran, dan akses. Hindari tes CRUD berulang yang menguji perilaku sama. Performance benchmark dijalankan pada milestone relevan, bukan blocker styling.
+
+Setiap milestone memiliki objective, scope, acceptance criteria, tes relevan, evidence, PASS/FAIL, dan regression check. Kekuatan bukti menyesuaikan risiko.

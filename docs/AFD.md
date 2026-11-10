@@ -5,10 +5,10 @@
 
 ### PERUMDA TUAH SEKATA — UNIT AGRO NIAGA
 
-**Versi:** 1.0 — Application Flow Baseline
+**Versi:** 1.1 — Application Flow Baseline
 **Tanggal:** 10 November 2026
 **Status:** Draft Perancangan Alur Aplikasi
-**Dokumen Induk:** PRD V1.0 dan TRD V1.0
+**Dokumen Induk:** PRD V1.1 dan TRD V1.1
 **Arsitektur Backend:** Modular Monolith — Clean Architecture 4 Layer
 **Arsitektur Frontend:** React + TypeScript — Atomic Design
 **Lingkup:** Portal Publik dan Portal Internal Unit Agro Niaga
@@ -2457,8 +2457,28 @@ Perancangan mempertahankan prinsip Modular Monolith dengan Clean Architecture em
 
 Seluruh flow dirancang agar dapat diterjemahkan menjadi use case, pengujian end-to-end, model database, aturan bisnis, dan tahapan implementasi secara terstruktur.
 
-**Status Dokumen: AFD V1.0 — APPLICATION FLOW BASELINE**
+**Status Dokumen: AFD V1.1 — APPLICATION FLOW BASELINE**
 
 **Dokumen Selanjutnya: Database Design Document (DBD).**
 
-**Akhir Dokumen — Application Flow Document V1.0**
+**Akhir Dokumen — Application Flow Document V1.1**
+
+# 45. PRIORITAS DAN KONTRAK FLOW V1.1
+
+Bagian ini mengklasifikasikan flow tanpa menghapus alur atau ID yang telah ditetapkan. Alur operasional inti tetap: Petani → Koperasi → Perumda/Proses Niaga → PKS → Rekonsiliasi → Penagihan/Pembayaran → Pelaporan.
+
+## 45.1 Prioritas
+
+Core: portal publik dan harga multi-PKS; login/session/RBAC/scope; master data; input, verifikasi dan publikasi harga; penerimaan, timbang dan grading; kontrak/kuota; penentuan tujuan dan e-DO; status pengiriman; verifikasi/tiket PKS; rekonsiliasi/dispute; nilai transaksi, faktur dan pencatatan pembayaran sesuai SOP; dashboard inti dan audit.
+
+Integrasi API PKS, GPS langsung, notifikasi tingkat lanjut, transfer bank otomatis, serta analitik lanjutan adalah conditional/deferred. Simulasi diberi label dan tidak dinyatakan sebagai kebijakan Perumda.
+
+## 45.2 Kontrak Tiap Flow
+
+Setiap flow MVP memetakan aktor/scope, prasyarat, input/validasi, satu use case/API operation, transisi yang diizinkan, efek transaksi dan audit, hasil sukses, error code, dan pemulihan. Error tidak menghapus jejak transaksi; mutasi yang dapat diulang memakai idempotency sesuai kebutuhan. Approval, rekonsiliasi, dispute, dan perlindungan transaksi tidak boleh dilewati.
+
+State pembayaran terpisah dari timbang/pengiriman serta membedakan arus masuk/keluar. Otorisasi final mengikuti SOP, tanpa mengasumsikan kewenangan baru.
+
+## 45.3 Pengujian Mandiri dan Integrasi
+
+Backend flow diuji tanpa frontend melalui API/OpenAPI: validasi, otorisasi, efek database, state, error, dan audit. Frontend menguji journey yang sama dengan OpenAPI dan MSW, termasuk loading, empty, error, dan success. Integrasikan per fitur saat kontrak kedua sisi siap. Setiap flow ditelusuri ke requirement PRD, rule BSD, data DBD, dan milestone IPD.

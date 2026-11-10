@@ -5,10 +5,10 @@
 
 ### PERUMDA TUAH SEKATA — UNIT AGRO NIAGA
 
-**Versi:** 1.0 — Business Rules & Operations Baseline
+**Versi:** 1.1 — Business Rules & Operations Baseline
 **Tanggal:** 10 November 2026
 **Status:** Draft untuk Validasi Operasional
-**Dokumen Induk:** PRD V1.0, TRD V1.0, AFD V1.0, DBD V1.0
+**Dokumen Induk:** PRD V1.1, TRD V1.1, AFD V1.1, DBD V1.1
 **Arsitektur:** Modular Monolith — Clean Architecture 4 Layer
 **Lingkup Bisnis:** Unit Agro Niaga Perumda Tuah Sekata
 **Metodologi Penelitian:** Design Science Research Methodology (DSRM)
@@ -2417,7 +2417,7 @@ Suatu aturan bisnis dinyatakan selesai apabila:
 
 # 38. KESIMPULAN
 
-Business System Document V1.0 menetapkan aturan bisnis awal untuk pengembangan Sistem Informasi Terintegrasi Rantai Pasok TBS pada Perumda Tuah Sekata, Unit Agro Niaga.
+Business System Document V1.1 menetapkan aturan bisnis awal untuk pengembangan Sistem Informasi Terintegrasi Rantai Pasok TBS pada Perumda Tuah Sekata, Unit Agro Niaga.
 
 Dokumen mengatur proses dari publikasi informasi harga, penerimaan petani, penimbangan, grading, kontrak, kuota, pengiriman, tiket PKS, rekonsiliasi, penyelesaian sengketa, penagihan, hingga pencatatan pembayaran.
 
@@ -2433,7 +2433,7 @@ Keputusan pembayaran harus mengikuti model bisnis dan kewenangan yang sah.
 
 BSD ini menjadi dasar implementasi business logic pada Domain Layer setiap modul backend, sekaligus sumber penyusunan pengujian aturan bisnis dan skenario end-to-end.
 
-**STATUS: BSD V1.0 — BUSINESS RULES BASELINE, MENUNGGU VALIDASI KEPUTUSAN OPERASIONAL**
+**STATUS: BSD V1.1 — BUSINESS RULES BASELINE, MENUNGGU VALIDASI KEPUTUSAN OPERASIONAL**
 
 **DOKUMEN SELANJUTNYA: IMPLEMENTATION PLAN DOCUMENT (IPD)**
 
@@ -2451,10 +2451,33 @@ BSD ini menjadi dasar implementasi business logic pada Domain Layer setiap modul
 
 ### Dokumen Internal Pengembangan
 
-- Product Requirements Document V1.0.
-- Technical Requirements Document V1.0.
-- Application Flow Document V1.0.
-- Database Design Document V1.0.
+- Product Requirements Document V1.1.
+- Technical Requirements Document V1.1.
+- Application Flow Document V1.1.
+- Database Design Document V1.1.
 - Proposal Tesis Givo Vrabora Revisi Final V2.
 
-**Akhir Dokumen — Business System Document V1.0**
+**Akhir Dokumen — Business System Document V1.1**
+
+# 39. STATUS PENGESAHAN ATURAN BISNIS V1.1
+
+Bagian ini memberi klasifikasi otoritatif pada aturan sebelumnya. Detail rumus dan alur adalah rancangan, bukan bukti SOP Perumda telah mengesahkannya.
+
+| Klasifikasi | Arti dan penggunaan |
+| --- | --- |
+| **Confirmed Business Rule** | Didukung SOP, kontrak, regulasi, atau konfirmasi pemilik proses terdokumentasi. Catat sumber, tanggal, dan pemberi konfirmasi sebelum menyebutnya resmi. |
+| **Prototype Simulation Rule** | Perilaku untuk demonstrasi terkontrol; beri label dan jangan klaim sebagai ketentuan Perumda. |
+| **Pending SOP Validation** | Menunggu keputusan Perumda/mitra. Jangan mengasumsikan nilai resmi. |
+| **Future Business Rule** | Bukan baseline tesis; jangan diterapkan sampai ada otorisasi dan scope. |
+
+## 39.1 Keputusan yang Belum Disahkan
+
+Gunakan **Pending SOP Validation** untuk: model principal/agent; hubungan hukum dan kontrak; penerapan harga acuan; kategori harga publik; petugas verifikasi harga; formula grading dan potongan; basis serta toleransi kuota/timbang; toleransi 1,5% (hanya contoh); penerbit/pengesah e-DO; muatan ditolak; jumlah tiket final; penyelesai dispute dan SLA; dasar harga settlement; pihak tertagih; metode alokasi hasil multi-petani; matriks otorisasi pembayaran; pembayaran parsial; bukti status pembayaran petani; serta retensi data/audit. Ambang persetujuan pembayaran mengikuti SOP resmi.
+
+Formula contoh, termasuk metode proporsional multi-petani, adalah **Prototype Simulation Rule** bila dipakai menguji aplikasi. Jangan mengklaimnya sebagai metode resmi. Formula grading menjadi Confirmed hanya setelah sumber resmi dicatat.
+
+## 39.2 Aturan Implementasi dan Traceability
+
+Tidak ada formula bisnis yang diubah tanpa dasar. Pertahankan snapshot harga/rule historis, riwayat rekonsiliasi dan keputusan, alokasi yang dapat ditelusuri, pemisahan pembayaran masuk/keluar, pemisahan status timbang/pengiriman/pembayaran, idempotency, least-privilege, dan audit transaksi penting. Pembayaran hanya dicatat/diverifikasi sesuai kewenangan tervalidasi; tidak ada asumsi transfer bank otomatis.
+
+Setiap rule demonstrasi memiliki label klasifikasi dan test scenario. Perubahan status menyimpan aktor, waktu, alasan, dan referensi yang diperlukan. Flow AFD, entitas/constraint DBD, requirement PRD, dan milestone IPD mengacu pada rule yang sama. Status konfirmasi tidak dinaikkan berdasarkan asumsi implementasi.

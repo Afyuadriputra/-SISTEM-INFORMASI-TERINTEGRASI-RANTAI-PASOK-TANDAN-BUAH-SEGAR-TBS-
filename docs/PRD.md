@@ -5,7 +5,7 @@
 
 ### PERUMDA TUAH SEKATA — UNIT AGRO NIAGA
 
-**Versi:** 1.0 — Draft Baseline
+**Versi:** 1.1 — Draft Baseline
 **Tanggal:** 10 November 2026
 **Status:** Draft untuk Validasi Kebutuhan
 **Jenis Produk:** Aplikasi Web Enterprise dan Portal Informasi Publik
@@ -2036,6 +2036,26 @@ Pengembangan mengikuti delapan modul utama yang telah ditetapkan pada proposal t
 
 PRD ini menjadi baseline kebutuhan yang akan diturunkan menjadi rancangan teknis, alur aplikasi, desain basis data, aturan bisnis terperinci, dan rencana implementasi.
 
-**Status akhir dokumen: DRAFT PRD V1.0 — SIAP MENJADI DASAR PENYUSUNAN TRD, DENGAN SEJUMLAH KEPUTUSAN OPERASIONAL YANG MASIH MEMERLUKAN VALIDASI.**
+**Status akhir dokumen: DRAFT PRD V1.1 — SIAP MENJADI DASAR PENYUSUNAN TRD, DENGAN SEJUMLAH KEPUTUSAN OPERASIONAL YANG MASIH MEMERLUKAN VALIDASI.**
 
-**Akhir Dokumen — Product Requirements Document V1.0**
+**Akhir Dokumen — Product Requirements Document V1.1**
+
+# 32. BASELINE PRIORITAS V1.1
+
+Bagian ini melengkapi prioritas pada Bagian 23–24. ID requirement yang sudah ada tetap berlaku. Fitur inti adalah Core MVP; evaluasi penelitian dan future enhancement tidak menggantikan alur rantai pasok inti.
+
+## 32.1 Core MVP
+
+Core MVP mencakup Portal Publik (harga multi-PKS terverifikasi, harga acuan Disbun bila tersedia, lokasi PKS, profil dan kemitraan), autentikasi dan RBAC dengan scope, master data petani/koperasi/PKS, harga internal, penerimaan dan penimbangan, grading sesuai aturan tervalidasi atau konfigurasi simulasi berlabel, kontrak dan kuota, e-DO/logistik, tiket timbang PKS, rekonsiliasi dan dispute, pencatatan settlement serta pembayaran sesuai kebijakan tervalidasi, dashboard inti, dan audit transaksi penting.
+
+Alur yang harus dapat didemonstrasikan tetap: **Petani → Koperasi → Perumda/Proses Niaga → PKS → Rekonsiliasi → Penagihan/Pembayaran → Pelaporan.**
+
+## 32.2 Research Evaluation
+
+Evaluasi DSRM, demonstrasi end-to-end, pengujian fungsional, UAT/SUS sesuai metode penelitian, serta pengukuran waktu, kesalahan, kelengkapan, dan keterlacakan adalah keluaran evaluasi, bukan kebijakan bisnis baru.
+
+## 32.3 Future Enhancements
+
+Integrasi API PKS otomatis, GPS langsung, prediksi harga AI, analitik lanjutan, notifikasi tingkat lanjut, settlement bank otomatis, observability terdistribusi, dan high availability produksi penuh ditunda sampai kebutuhan, akses, persetujuan, dan kapasitas terverifikasi. Transfer bank otomatis dan kendali mesin timbang berada di luar baseline tesis.
+
+Gunakan label Core MVP, Research Evaluation, Conditional, atau Future pada backlog dan acceptance criteria. Pembayaran MVP berarti pencatatan, verifikasi, dan persetujuan sesuai SOP yang tersedia; aplikasi tidak mengklaim melakukan transfer dana.
