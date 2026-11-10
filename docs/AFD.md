@@ -330,16 +330,14 @@ Memungkinkan masyarakat dan pengguna internal melihat serta membandingkan harga 
 
 1. Pengguna memilih menu Harga TBS.
 2. Frontend meminta data harga publik.
-3. Backend memeriksa cache harga.
-4. Jika cache valid, data diambil dari Redis.
-5. Jika cache tidak tersedia atau kedaluwarsa, data diambil dari PostgreSQL.
-6. Backend menyaring harga yang telah disetujui untuk publikasi.
-7. Sistem mengembalikan daftar harga beserta sumber dan periode.
-8. Frontend menampilkan daftar harga.
-9. Pengguna memilih filter atau pengurutan.
-10. Sistem memperbarui daftar berdasarkan kriteria.
-11. Pengguna memilih salah satu PKS.
-12. Sistem membuka halaman detail harga dan informasi PKS.
+3. Backend membaca cache-aside Redis menggunakan key publik berversi dan TTL.
+4. Pada cache miss/expired, backend membaca PostgreSQL, menyaring harga terverifikasi dan aktif, lalu mengisi cache.
+5. Backend mengembalikan daftar beserta sumber, periode, dan waktu pembaruan.
+6. Frontend menampilkan daftar harga.
+7. Pengguna memilih filter atau pengurutan.
+8. Sistem memperbarui daftar berdasarkan kriteria.
+9. Pengguna memilih PKS.
+10. Sistem membuka detail harga dan informasi PKS.
 
 ## 5.4 Informasi yang Ditampilkan
 
@@ -382,7 +380,7 @@ Pemilihan tujuan pengiriman merupakan proses bisnis internal yang juga mempertim
 - Cache Redis gagal.
 - Backend gagal mengambil data.
 
-Dalam kondisi kegagalan Redis, sistem dapat membaca PostgreSQL sesuai mekanisme fallback yang aman.
+Untuk pembacaan publik nonkritis, kegagalan Redis dicatat dan boleh fallback ke PostgreSQL dengan timeout serta pembatasan beban. Cache hit/miss, latency, invalidation, dan error dipantau tanpa payload sensitif. Kegagalan session store harus menolak akses terautentikasi; kegagalan rate-limit state memakai batas aman atau menolak operasi sensitif sesuai kebijakan. Kontrol keamanan tidak boleh fail-open.
 
 ## 5.8 Kriteria Penerimaan
 
@@ -2462,23 +2460,3 @@ Seluruh flow dirancang agar dapat diterjemahkan menjadi use case, pengujian end-
 **Dokumen Selanjutnya: Database Design Document (DBD).**
 
 **Akhir Dokumen — Application Flow Document V1.1**
-
-# 45. PRIORITAS DAN KONTRAK FLOW V1.1
-
-Bagian ini mengklasifikasikan flow tanpa menghapus alur atau ID yang telah ditetapkan. Alur operasional inti tetap: Petani → Koperasi → Perumda/Proses Niaga → PKS → Rekonsiliasi → Penagihan/Pembayaran → Pelaporan.
-
-## 45.1 Prioritas
-
-Core: portal publik dan harga multi-PKS; login/session/RBAC/scope; master data; input, verifikasi dan publikasi harga; penerimaan, timbang dan grading; kontrak/kuota; penentuan tujuan dan e-DO; status pengiriman; verifikasi/tiket PKS; rekonsiliasi/dispute; nilai transaksi, faktur dan pencatatan pembayaran sesuai SOP; dashboard inti dan audit.
-
-Integrasi API PKS, GPS langsung, notifikasi tingkat lanjut, transfer bank otomatis, serta analitik lanjutan adalah conditional/deferred. Simulasi diberi label dan tidak dinyatakan sebagai kebijakan Perumda.
-
-## 45.2 Kontrak Tiap Flow
-
-Setiap flow MVP memetakan aktor/scope, prasyarat, input/validasi, satu use case/API operation, transisi yang diizinkan, efek transaksi dan audit, hasil sukses, error code, dan pemulihan. Error tidak menghapus jejak transaksi; mutasi yang dapat diulang memakai idempotency sesuai kebutuhan. Approval, rekonsiliasi, dispute, dan perlindungan transaksi tidak boleh dilewati.
-
-State pembayaran terpisah dari timbang/pengiriman serta membedakan arus masuk/keluar. Otorisasi final mengikuti SOP, tanpa mengasumsikan kewenangan baru.
-
-## 45.3 Pengujian Mandiri dan Integrasi
-
-Backend flow diuji tanpa frontend melalui API/OpenAPI: validasi, otorisasi, efek database, state, error, dan audit. Frontend menguji journey yang sama dengan OpenAPI dan MSW, termasuk loading, empty, error, dan success. Integrasikan per fitur saat kontrak kedua sisi siap. Setiap flow ditelusuri ke requirement PRD, rule BSD, data DBD, dan milestone IPD.

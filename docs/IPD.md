@@ -1,3 +1,4 @@
+
 # IMPLEMENTATION PLAN DOCUMENT (IPD)
 
 ## SISTEM INFORMASI TERINTEGRASI RANTAI PASOK TANDAN BUAH SEGAR (TBS)
@@ -92,13 +93,13 @@ Pengembangan unit usaha Listrik dan Gas tidak termasuk cakupan.
 
 ---
 
-# 2. MODEL PENGEMBANGAN PARALEL
+# 2. MODEL PENGEMBANGAN INDEPENDEN DAN PARALEL
 
 ## 2.1 Pendekatan yang Dipilih
 
-Model pengembangan menggunakan **Contract-First Parallel Development**.
+Model pengembangan menggunakan **Contract-First, Independently Testable Development**. Baseline pelaksanaan adalah satu developer manusia dengan coding agent sebagai opsi paralel, bukan asumsi tim multi-developer.
 
-Pada model ini, backend dan frontend tidak menunggu implementasi satu sama lain.
+Backend dan frontend tidak saling menunggu karena OpenAPI dan MSW memungkinkan pengembangan mandiri. Satu developer dapat memilih backend-first, frontend-first, bergantian per fitur, atau memakai coding agent paralel dengan batas edit yang jelas.
 
 Keduanya menggunakan kontrak, kebutuhan, dan skenario pengujian yang disepakati.
 
@@ -536,9 +537,9 @@ M0 dinyatakan PASS apabila:
 - Contoh response konsisten.
 - Status dan error code konsisten.
 - Tidak ada konflik dokumen kritis yang tidak tercatat.
-- Backend dan frontend dapat memulai pekerjaan masing-masing tanpa asumsi tersembunyi.
+- Backend dapat diuji tanpa frontend dan frontend dapat diuji dengan OpenAPI/MSW tanpa backend.\n- Satu developer dapat memilih urutan kerja; batas edit dan pemilik migrasi jelas.\n- Keputusan SOP pending memiliki simulasi berlabel, tidak dianggap sebagai kebijakan resmi.
 
-**Setelah M0 PASS, Backend Track dan Frontend Track dapat berjalan paralel.**
+**Setelah M0 PASS, developer dapat memilih Backend Track atau Frontend Track terlebih dahulu, bergantian per fitur, atau menjalankan keduanya paralel dengan coding agent. Kontrak dan batas edit tetap wajib.**
 
 ---
 
@@ -763,60 +764,32 @@ Larangan dependency lintas modul tidak hanya dijelaskan dalam dokumentasi, tetap
 
 ---
 
-# 10. BACKEND MILESTONE B0 — PROJECT FOUNDATION
+# 10. BACKEND MILESTONE B0 - PROJECT FOUNDATION
 
 ## 10.1 Pekerjaan
 
-1. Inisialisasi Python project.
-2. Konfigurasi uv.
-3. Instalasi FastAPI.
-4. Konfigurasi Pydantic Settings.
-5. Konfigurasi PostgreSQL.
-6. Konfigurasi SQLAlchemy Async.
-7. Konfigurasi Alembic.
-8. Konfigurasi Redis.
-9. Struktur modular.
-10. Dependency Injection.
-11. Global exception handler.
-12. Request ID middleware.
-13. Structured logging.
-14. Health endpoints.
-15. Pengujian awal.
-16. Docker Compose untuk database dan cache.
+1. Inisialisasi Python project dan dependency lock.
+2. FastAPI dan Pydantic Settings.
+3. PostgreSQL, SQLAlchemy Async, Alembic.
+4. Redis client, connection pool, timeout, lifecycle, dan Docker Compose PostgreSQL + Redis.
+5. Struktur Modular Monolith; setiap modul menggunakan empat layer.
+6. Wiring dependency eksplisit, tanpa container kompleks.
+7. Global exception handler, Request ID middleware, structured logging.
+8. Health/readiness checks untuk dependensi wajib.
+9. Architecture, startup, database, dan Redis tests.
 
-## 10.2 Output
+## 10.2 Output dan Tes
 
-- Backend dapat dijalankan.
-- `/health/live` tersedia.
-- `/health/ready` tersedia.
-- PostgreSQL dapat diakses.
-- Redis dapat diakses.
+- Backend dapat dimulai; /health/live dan /health/ready tersedia.
+- PostgreSQL dan Redis tersambung melalui lifecycle client yang terkelola.
 - Alembic baseline berjalan.
-- Modul mengikuti template empat layer.
-- Logging awal berfungsi.
+- Logging dan Request ID berfungsi.
+- Connectivity, timeout/pool lifecycle, Redis health/readiness, wiring, logging, dan architecture tests lulus.
+- Docker Compose menjalankan PostgreSQL dan Redis.
 
-## 10.3 Test
+## 10.3 Exit Gate
 
-- Application startup test.
-- Database connectivity test.
-- Redis connectivity test.
-- Dependency injection test.
-- Logging test.
-- Health endpoint test.
-- Architecture test.
-
-## 10.4 Exit Gate
-
-B0 PASS apabila:
-
-- Server berjalan.
-- Konfigurasi tervalidasi.
-- Semua tes foundation lulus.
-- Tidak ada secret dalam kode.
-- Tidak ada pelanggaran aturan layer.
-- Dokumentasi setup tersedia.
-
----
+B0 PASS apabila konfigurasi tervalidasi, database dan Redis tersedia, semua foundation tests lulus, readiness memeriksa dependensi wajib, tidak ada secret dalam kode, dan dokumentasi setup tersedia.
 
 # 11. BACKEND MILESTONE B1 — IDENTITY & ACCESS
 
@@ -2663,11 +2636,11 @@ Pengecualian harus terdokumentasi dan tidak digunakan untuk mengabaikan kegagala
 
 ---
 
-# 52. MULTI-DEVELOPER / MULTI-AGENT WORKFLOW
+# 52. OPTIONAL PARALLEL CODING-AGENT WORKFLOW
 
 ## 52.1 Tujuan
 
-Memungkinkan beberapa pengembang atau coding agent bekerja secara paralel tanpa saling merusak pekerjaan.
+Mendukung coding agent secara opsional tanpa mengasumsikan lebih dari satu developer manusia. Backend/frontend dapat dikerjakan berurutan atau paralel. Peran backend, frontend, dan integration reviewer adalah tanggung jawab kerja, bukan asumsi tiga orang; satu developer tetap pemilik integrasi, migrasi, dan keputusan.
 
 ## 52.2 Pembagian Tanggung Jawab
 
@@ -3182,20 +3155,20 @@ Integrasi dinyatakan selesai apabila:
 
 # 63. KEPUTUSAN YANG MASIH PERLU DIVALIDASI
 
-| Kode        | Keputusan                            | Status                        |
-| ----------- | ------------------------------------ | ----------------------------- |
-| IPD-DEC-001 | Model bisnis principal/agent         | Perlu validasi                |
-| IPD-DEC-002 | Formula grading                      | Perlu validasi                |
-| IPD-DEC-003 | Toleransi timbang                    | Perlu validasi                |
-| IPD-DEC-004 | Metode alokasi multi-petani          | Perlu validasi                |
-| IPD-DEC-005 | Kewenangan pembayaran                | Perlu validasi                |
-| IPD-DEC-006 | Sumber harga resmi PKS               | Perlu validasi                |
-| IPD-DEC-007 | Hak publikasi lokasi mitra           | Perlu validasi                |
-| IPD-DEC-008 | Ketersediaan API PKS                 | Belum dipastikan              |
-| IPD-DEC-009 | Spesifikasi deployment server        | Belum final                   |
-| IPD-DEC-010 | Jumlah developer dan kapasitas kerja | Belum final                   |
-| IPD-DEC-011 | Target waktu penyelesaian kalender   | Belum final                   |
-| IPD-DEC-012 | Persyaratan penggunaan produksi      | Menunggu keputusan organisasi |
+| Kode        | Keputusan                               | Status                           |
+| ----------- | --------------------------------------- | -------------------------------- |
+| IPD-DEC-001 | Model bisnis principal/agent            | Perlu validasi                   |
+| IPD-DEC-002 | Formula grading                         | Perlu validasi                   |
+| IPD-DEC-003 | Toleransi timbang                       | Perlu validasi                   |
+| IPD-DEC-004 | Metode alokasi multi-petani             | Perlu validasi                   |
+| IPD-DEC-005 | Kewenangan pembayaran                   | Perlu validasi                   |
+| IPD-DEC-006 | Sumber harga resmi PKS                  | Perlu validasi                   |
+| IPD-DEC-007 | Hak publikasi lokasi mitra              | Perlu validasi                   |
+| IPD-DEC-008 | Ketersediaan API PKS                    | Belum dipastikan                 |
+| IPD-DEC-009 | Spesifikasi deployment server           | Belum final                      |
+| IPD-DEC-010 | Estimasi kapasitas/waktu solo developer | Perlu estimasi setelah scope MVP |
+| IPD-DEC-011 | Target waktu penyelesaian kalender      | Belum final                      |
+| IPD-DEC-012 | Persyaratan penggunaan produksi         | Menunggu keputusan organisasi    |
 
 Keputusan terbuka tidak menghalangi pengembangan fitur yang tidak bergantung pada keputusan tersebut.
 
@@ -3207,11 +3180,7 @@ Namun, keputusan kritis dapat menghalangi pengesahan workflow keuangan nyata.
 
 Implementation Plan Document V1.1 menetapkan pelaksanaan oleh satu developer dengan jalur backend dan frontend yang dapat dikembangkan serta diuji secara independen.
 
-Pengembangan dibagi menjadi:
-
-1. Backend Development Track.
-2. Frontend Development Track.
-3. Shared Contract & Integration Track.
+Pengembangan memakai satu developer manusia dengan Backend Track, Frontend Track, dan Shared Contract & Integration Track yang dapat dikerjakan independen. Urutan default adalah M0, B0, B1, modul backend menurut dependensi, F0/F1, frontend dengan mock API, integrasi per fitur, full-stack verification, lalu evaluasi tesis. Urutan dapat dibalik atau diselingi per modul; tidak perlu menunggu seluruh backend selesai.
 
 Backend dikembangkan secara independen menggunakan FastAPI, PostgreSQL, Redis, Clean Architecture empat layer per modul, prinsip SOLID, serta pengujian domain, integrasi, keamanan, concurrency, dan performa.
 
@@ -3231,60 +3200,6 @@ Pendekatan ini memungkinkan pengembangan yang lebih terstruktur, mengurangi konf
 
 **STATUS: IPD V1.1 — SOLO DEVELOPER EXECUTION BASELINE**
 
-**URUTAN IMPLEMENTASI: M0 CONTRACT ALIGNMENT → BACKEND- OR FRONTEND-FIRST → INCREMENTAL INTEGRATION → FULL-STACK VERIFICATION → EVALUASI TESIS**
+**URUTAN IMPLEMENTASI: M0 -> B0/B1 -> MODUL BACKEND + F0/F1/FRONTEND MOCK -> INTEGRASI PER FITUR -> FULL-STACK VERIFICATION -> EVALUASI TESIS**
 
 **Akhir Dokumen — Implementation Plan Document V1.1**
-
-
-# 65. SOLO DEVELOPER EXECUTION BASELINE V1.1
-
-Bagian ini adalah urutan kerja otoritatif V1.1 dan mengubah asumsi organisasi pada model parallel sebelumnya. Milestone B0–B11, F0–F11, dan I0–I4 tetap menjadi katalog deliverable; tidak ada asumsi dua developer manusia.
-
-## 65.1 Model Kerja
-
-Model operasi adalah **One Human Developer + Optional Coding Agents**. Default-nya satu developer mengerjakan backend dan frontend berurutan atau bergantian dengan batas direktori dan kontrak jelas. Kedua sisi tetap independen dan dapat diuji mandiri. Agen dapat membantu paralel tanpa mengubah arsitektur menjadi microservices.
-
-OpenAPI adalah kontrak bersama. Backend dibangun dan diuji tanpa frontend; frontend memakai OpenAPI dan MSW tanpa backend. Integrasi dilakukan per fitur/kelompok saat kedua sisi siap.
-
-## 65.2 Urutan Default
-
-1. **M0 — Requirements & Contract Alignment:** scope MVP, traceability, klasifikasi rule, OpenAPI awal, status/error, dan pemilik migrasi.
-2. **B0 — Backend Foundation**, lalu **B1 — Identity & Security**.
-3. Backend business modules menurut dependensi: master data/pricing; receiving/weighing/grading; contracts/quota; logistics/e-DO; mill ticket; reconciliation/dispute; finance/settlement; reporting/audit. Gunakan B2–B11 sebagai rujukan, gabungkan milestone bila hasil tetap demonstrable dan acceptance criteria teruji.
-4. **F0 — Frontend Foundation**, **F1 — Atomic Design**, lalu fitur dengan mock API. Frontend boleh dimulai lebih awal atau diselingi backend.
-5. **Incremental Integration** saat kelompok fitur siap.
-6. **Full-Stack Verification** untuk journey utama dan regresi.
-7. **Thesis Evaluation** sesuai DSRM.
-
-Urutan default tidak mensyaratkan seluruh backend selesai sebelum frontend. Milestone menghasilkan unit demonstrable, bukan hanya folder atau boilerplate.
-
-Redis bukan prasyarat B0 atau test lokal jika belum ada use case cache yang memerlukannya. PostgreSQL tetap menjadi dependency data utama.
-
-## 65.3 Agen dan Perubahan Bersama
-
-Jika coding agent digunakan, tetapkan direktori/file yang boleh disentuh; jangan mengedit file yang sama bersamaan; gunakan branch/worktree bila perlu; OpenAPI tetap kontrak; satu pemilik mengoordinasikan migrasi; jalankan regresi setelah penggabungan. Developer meninjau integrasi dan perubahan aturan.
-
-Dokumentasi minimum: requirements, keputusan arsitektur, API contract, laporan tes, changelog, dan known limitations. Hindari artefak administratif duplikat.
-
-## 65.4 Risk-Based Quality Gates
-
-Setiap gate mencatat objective, scope, acceptance criteria, tes relevan, evidence, PASS/FAIL, dan regression check.
-
-| Jenis perubahan | Pemeriksaan relevan |
-| --- | --- |
-| Domain uang/berat/kuota/settlement | Domain unit, database integration, concurrency bila ada race, authorization, audit, regression |
-| API/contract | OpenAPI diff dan contract test pada sisi berubah serta mock/client terkait |
-| Database | Alembic upgrade, constraints, integration test, kompatibilitas data dan query terdampak |
-| UI styling/layout | Typecheck, responsive, accessibility/reduced-motion relevan, visual review, build |
-| Journey kritis | End-to-end API/browser pada alur utama dan error penting |
-| Performance/security | Benchmark atau pemeriksaan terarah pada milestone berisiko; full load test tidak menjadi blocker untuk perubahan UI kecil |
-
-## 65.5 Definition of Done Ringkas
-
-Satu unit kerja selesai jika requirement terpenuhi; arsitektur dan scope benar; tes relevan PASS; tidak ada regresi kritis; kontrak, migrasi, dan dokumentasi diperbarui bila terdampak; bukti gate tercatat; serta limitation diketahui dicatat. Persentase coverage bukan pengganti bukti aturan bisnis.
-
-## 65.6 Pemetaan Milestone Vertikal
-
-Untuk pelaksanaan, milestone dapat dikelompokkan menjadi: (1) fondasi + identitas; (2) portal publik + harga; (3) master data + receiving/grading; (4) kontrak/kuota + e-DO/logistik; (5) tiket PKS + rekonsiliasi/dispute; (6) settlement/pembayaran + dashboard/audit; (7) hardening dan evaluasi. Pertahankan ID milestone lama untuk traceability. Penggabungan tidak menghapus verifikasi khusus berbasis risiko.
-
-V1.1 mengoreksi status salah salin pada kesimpulan lama: status BSD hanya berlaku di BSD. Status dokumen ini adalah **IPD V1.1 — Solo Developer Execution Baseline**. Istilah kontrak, status, dan error mengikuti AFD/BSD; perubahan harus disinkronkan ke referensi terdampak.

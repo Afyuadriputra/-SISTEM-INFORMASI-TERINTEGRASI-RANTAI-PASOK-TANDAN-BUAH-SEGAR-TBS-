@@ -134,86 +134,48 @@ Microservices tidak digunakan pada baseline karena kompleksitas operasionalnya b
 
 ## 3.1 Backend Stack
 
-| Komponen               | Teknologi/Library | Fungsi                                      |
-| ---------------------- | ----------------- | ------------------------------------------- |
-| Bahasa                 | Python 3.12+      | Bahasa utama backend                        |
-| Framework API          | FastAPI           | REST API dan dependency injection           |
-| ASGI Server            | Uvicorn           | Menjalankan aplikasi ASGI                   |
-| Validasi Data          | Pydantic          | Validasi request, response, dan konfigurasi |
-| ORM                    | SQLAlchemy 2.x    | Akses data dan pemetaan objek relasional    |
-| Database Driver        | asyncpg           | Koneksi PostgreSQL asynchronous             |
-| Migrasi Database       | Alembic           | Migrasi skema database                      |
-| Database               | PostgreSQL 17+    | Penyimpanan data transaksi                  |
-| Cache                  | Redis             | Cache, rate-limit state, dan data sementara |
-| Redis Client           | redis-py          | Komunikasi dengan Redis                     |
-| HTTP Client            | HTTPX             | Integrasi API pihak ketiga                  |
-| Password Hashing       | argon2-cffi       | Hash password Argon2id                      |
-| Structured Logging     | structlog         | Logging terstruktur                         |
-| Tracing                | OpenTelemetry     | Distributed tracing dan instrumentasi       |
-| Metrics                | prometheus-client | Pengukuran metrik operasional               |
-| QR Code                | Segno             | Pembuatan QR Code e-DO                      |
-| Pengujian              | pytest            | Framework pengujian                         |
-| Async Testing          | pytest-asyncio    | Pengujian fungsi asynchronous               |
-| Coverage               | pytest-cov        | Cakupan pengujian                           |
-| Property-Based Testing | Hypothesis        | Pengujian properti aturan bisnis            |
-| Lint & Formatting      | Ruff              | Pemeriksaan gaya dan kualitas kode          |
-| Static Type Checking   | Pyright           | Pemeriksaan tipe statis                     |
-| Dependency Management  | uv                | Instalasi dan penguncian dependensi         |
+| Status | Komponen | Teknologi | Ketentuan |
+| --- | --- | --- | --- |
+| Required | API/runtime | Python 3.12+, FastAPI, Uvicorn, Pydantic | REST API, async runtime, validasi request/config |
+| Required | Relational data | PostgreSQL, SQLAlchemy 2.x, asyncpg, Alembic | Source of truth, async I/O, ORM, incremental migrations |
+| Required | Cache | Redis, redis-py | Infrastruktur wajib sejak B0; cache fungsional per use case |
+| Required | Security | argon2-cffi | Password hashing Argon2id |
+| Required | Logging | structlog atau structured logging setara | Request/error/security events dan redaksi |
+| Required | Quality | pytest, pytest-asyncio, Ruff, Pyright, uv | Test, lint/format/typecheck, lockfile |
+| Conditional | Integrasi/fitur | HTTPX, Segno, Hypothesis | Sesuai kebutuhan API, QR, atau property tests |
+| Conditional | Coverage reporting | pytest-cov | Sinyal cakupan, bukan target universal |
+| Deferred | Monitoring stack | Prometheus client, OpenTelemetry exporters | Aktifkan bertahap sesuai kebutuhan deployment |
 
-Versi final dependency wajib dikunci dalam lockfile setelah pemeriksaan kompatibilitas.
-
-Library tidak boleh otomatis menggunakan versi terbaru di production tanpa melalui pengujian.
+Versi dependency dikunci dan diuji kompatibilitasnya. Jangan menambah dependency untuk abstraksi tanpa manfaat.
 
 ## 3.2 Frontend Stack
 
-| Komponen              | Teknologi/Library     | Fungsi                                 |
-| --------------------- | --------------------- | -------------------------------------- |
-| Bahasa                | TypeScript            | Type safety frontend                   |
-| UI Framework          | React 19              | Pengembangan antarmuka                 |
-| Build Tool            | Vite                  | Development server dan build           |
-| Styling               | Tailwind CSS 4        | Sistem styling                         |
-| UI Foundation         | shadcn/ui             | Komponen UI yang dapat dikustomisasi   |
-| Accessible Primitives | Radix UI              | Komponen interaksi aksesibel           |
-| Routing               | TanStack Router       | Routing dan navigasi bertipe           |
-| Server State          | TanStack Query        | Fetching, cache, dan sinkronisasi data |
-| Client State          | Zustand               | State antarmuka lintas komponen        |
-| Forms                 | React Hook Form       | Pengelolaan formulir                   |
-| Validation            | Zod                   | Validasi skema input                   |
-| Form Resolver         | @hookform/resolvers   | Integrasi Zod dengan formulir          |
-| Tables                | TanStack Table        | Tabel dengan filter dan pagination     |
-| Charts                | Recharts              | Visualisasi data                       |
-| Maps                  | MapLibre GL JS        | Visualisasi lokasi perusahaan          |
-| Icons                 | Lucide React          | Ikon antarmuka                         |
-| Date Utilities        | date-fns              | Pengelolaan tanggal                    |
-| Notifications         | Sonner                | Toast dan notifikasi UI                |
-| Unit Testing          | Vitest                | Pengujian unit                         |
-| Component Testing     | React Testing Library | Pengujian komponen                     |
-| Browser Testing       | Playwright            | End-to-end testing                     |
-| Accessibility Testing | axe-core              | Pemeriksaan aksesibilitas              |
-| Code Quality          | ESLint                | Pemeriksaan kode                       |
-| Formatting            | Prettier              | Konsistensi format                     |
+| Status | Komponen | Teknologi | Ketentuan |
+| --- | --- | --- | --- |
+| Required | Aplikasi | React, TypeScript, Vite | TypeScript strict mode dan production build |
+| Required | Styling | Tailwind CSS, design tokens | Token menjadi sumber nilai visual |
+| Required | Arsitektur UI | Atomic Design lima level, Feature-Based Organization | Atoms, Molecules, Organisms, Templates, Pages |
+| Required | Data/form | TanStack Query, React Hook Form, Zod, @hookform/resolvers | Server/form state; backend tetap validasi ulang |
+| Required | Contract/testing | OpenAPI, MSW, Playwright | Frontend independen dari backend |
+| Required | Routing/quality | TanStack Router, Vitest, React Testing Library, ESLint, Prettier | Baseline routing dan quality |
+| Conditional | UI/primitives | shadcn/ui, Radix UI, Lucide React, Sonner | Gunakan komponen yang benar-benar dipakai |
+| Conditional | Feature libraries | TanStack Table, Recharts, MapLibre GL JS, date-fns, axe-core | Sesuai kebutuhan fitur |
+| Conditional | Client state | Zustand | Hanya untuk state lintas komponen yang tidak nyaman dikelola lokal/server |
 
-Library hanya digunakan sesuai kebutuhan. Tidak diperbolehkan memasang beberapa library yang menjalankan fungsi sama tanpa alasan teknis.
+Jangan memakai dua library untuk fungsi chart atau state yang sama. Komponen fitur tetap dimiliki folder fitur.
 
 ## 3.3 Infrastruktur
 
-| Komponen             | Pilihan             | Prioritas                        |
-| -------------------- | ------------------- | -------------------------------- |
-| Container            | Docker              | Wajib                            |
-| Local Orchestration  | Docker Compose      | Wajib                            |
-| Reverse Proxy        | Caddy atau Nginx    | Wajib untuk deployment           |
-| Cache Service        | Redis               | Wajib                            |
-| Database Service     | PostgreSQL          | Wajib                            |
-| Metrics              | Prometheus          | Dianjurkan                       |
-| Monitoring Dashboard | Grafana             | Dianjurkan                       |
-| Centralized Logs     | Grafana Loki        | Dianjurkan                       |
-| Tracing Backend      | Tempo atau Jaeger   | Opsional                         |
-| Object Storage       | S3-compatible/MinIO | Opsional sesuai kebutuhan berkas |
-| CI                   | GitHub Actions      | Dianjurkan                       |
+| Komponen | Status | Ketentuan |
+| --- | --- | --- |
+| Docker dan Docker Compose | Required | Environment lokal memuat PostgreSQL dan Redis |
+| PostgreSQL dan Redis | Required | Redis siap terhubung sejak B0; cache berkembang per modul |
+| Reverse proxy | Conditional | Caddy atau Nginx bila deployment memerlukannya |
+| CI | Required untuk quality gates | Jalankan pemeriksaan dan tes relevan |
+| Prometheus, Grafana, Loki, OpenTelemetry backend | Deferred/Conditional | Logging aplikasi tetap wajib; backend eksternal bertahap |
+| Object storage | Conditional | Bila kebutuhan file memerlukannya |
 
-Observability tingkat lanjut dapat diaktifkan bertahap tanpa mengubah logika bisnis.
-
----
+Kubernetes dan high availability kompleks bukan baseline tesis.
 
 # 4. ARSITEKTUR SISTEM KESELURUHAN
 
@@ -294,239 +256,62 @@ Tidak diperlukan Kubernetes pada tahap tesis.
 
 ## 5.1 Ketentuan Utama
 
-**Setiap modul backend wajib memiliki empat layer.**
+Backend wajib menggunakan **Modular Monolith + Clean Architecture + SOLID**. Setiap modul memiliki folder domain/, application/, infrastructure/, dan presentation/ di dalam batas modul itu sendiri. Struktur dan jumlah file mengikuti tanggung jawab nyata; subfolder kosong tidak dibuat.
 
-Layer tersebut adalah:
+## 5.2 Tanggung Jawab Layer
 
-1. Domain Layer.
-2. Application Layer.
-3. Infrastructure Layer.
-4. Presentation Layer.
+- **Domain:** entities, value objects, aturan dan invariant bisnis; bebas framework, HTTP, ORM, dan Redis.
+- **Application:** mengoordinasikan use case, otorisasi konteks, transaksi, serta port yang diperlukan.
+- **Infrastructure:** implementasi persistence/repository, cache Redis, integrasi eksternal, dan adapter teknis.
+- **Presentation:** routes, request/response schemas, validasi protokol, pemetaan error/response.
 
-Tidak diperbolehkan menempatkan seluruh business logic dalam satu folder service global.
+Pisahkan domain dari HTTP/database dan hindari duplikasi logika bisnis. Interface/port dibuat saat membantu testability, variasi implementasi, atau dependency boundary. Hindari generic repository, inheritance hierarchy, factory, dan service wrapper tanpa tanggung jawab jelas.
 
-Tidak diperbolehkan menempatkan seluruh implementasi database dalam satu repository global yang mencampur semua domain.
+## 5.3 Dependency Direction dan Wiring
 
-## 5.2 Domain Layer
+Arah dependency: Presentation ? Application ? Domain. Infrastructure mengimplementasikan port yang diperlukan inner layers. Domain tidak bergantung pada layer luar. Wiring dilakukan eksplisit di composition root menggunakan FastAPI dependencies; container DI kompleks tidak diperlukan. Hindari circular dependency.
 
-Domain Layer memuat aturan bisnis inti.
+## 5.4 Pragmatic SOLID dan Enforcement
 
-Komponen:
-
-- Entities.
-- Value Objects.
-- Domain Services.
-- Business Rules.
-- Domain Events.
-- Domain Exceptions.
-- Repository Port/Interface.
-
-Contoh tanggung jawab:
-
-- Menghitung persentase selisih berat.
-- Memastikan nilai timbangan valid.
-- Menentukan apakah transaksi memerlukan pemeriksaan.
-- Memastikan status bisnis dapat berubah sesuai aturan.
-
-Domain Layer tidak boleh mengimpor FastAPI, SQLAlchemy ORM, Redis, atau komponen frontend.
-
-Domain Layer harus dapat diuji menggunakan Python biasa.
-
-## 5.3 Application Layer
-
-Application Layer mengatur pelaksanaan use case.
-
-Komponen:
-
-- Commands.
-- Queries.
-- Use Case Handlers.
-- Application Services.
-- DTO.
-- Transaction Orchestration.
-- Application Ports.
-
-Contoh:
-
-- CreateTbsReceipt.
-- PublishMillPrice.
-- CreateDeliveryOrder.
-- RegisterMillTicket.
-- ReconcileWeighing.
-- ApprovePayment.
-
-Application Layer berfungsi sebagai penghubung antara HTTP/API dengan aturan bisnis.
-
-Layer ini mengatur urutan pekerjaan, hak akses kontekstual, dan unit transaksi melalui abstraksi.
-
-Application Layer tidak boleh menyusun SQL mentah atau bergantung langsung pada implementasi router FastAPI.
-
-## 5.4 Infrastructure Layer
-
-Infrastructure Layer mengimplementasikan kebutuhan teknis.
-
-Komponen:
-
-- ORM Models.
-- Repository Implementations.
-- Database Mappers.
-- External API Clients.
-- Cache Adapters.
-- File Storage Adapters.
-- Event Publishers.
-- External Service Integrations.
-
-Contoh:
-
-- SqlAlchemyPriceRepository.
-- PostgresWeighingRepository.
-- RedisPublicPriceCache.
-- MillApiClient.
-- FileTicketStorage.
-
-Infrastructure Layer boleh menggunakan SQLAlchemy, Redis, HTTPX, dan library teknis lainnya.
-
-Infrastructure Layer mengimplementasikan interface yang didefinisikan pada layer dalam.
-
-## 5.5 Presentation Layer
-
-Presentation Layer bertanggung jawab terhadap komunikasi aplikasi dengan dunia luar.
-
-Komponen:
-
-- API Routes.
-- Request Schemas.
-- Response Schemas.
-- HTTP Dependencies.
-- Endpoint Validation.
-- Response Mapping.
-
-Contoh endpoint:
-
-- GET /api/v1/public/prices
-- GET /api/v1/public/mills
-- POST /api/v1/receipts
-- POST /api/v1/delivery-orders
-- POST /api/v1/reconciliations
-
-Presentation Layer tidak boleh menghitung aturan bisnis inti.
-
-Endpoint harus tetap tipis dan hanya mengatur penerimaan request, pemanggilan use case, serta pengembalian response.
-
-## 5.6 Aturan Dependency
-
-Arah dependency logis:
-
-- Presentation → Application.
-- Application → Domain.
-- Infrastructure → Domain/Application Ports.
-- Domain → Tidak bergantung pada layer luar.
-
-Implementasi konkret dihubungkan melalui Dependency Injection pada composition root.
-
-Application Layer tidak boleh mengimpor Infrastructure Implementation secara langsung.
-
----
+Terapkan SOLID untuk menjaga tanggung jawab dan dependency boundaries, bukan memaksa interface per class. Architecture tests/import rules tetap wajib pada CI untuk batas layer dan modul yang ditetapkan.
 
 # 6. STRUKTUR FOLDER BACKEND
 
-Struktur repositori yang direkomendasikan:
+Struktur baseline ringkas dan eksplisit. Setiap modul yang dibuat wajib memiliki empat layer.
 
-```text
+```
 backend/
-├── app/
-│   ├── main.py
-│   ├── bootstrap/
-│   │   ├── app_factory.py
-│   │   ├── dependency_container.py
-│   │   └── router_registry.py
-│   │
-│   ├── core/
-│   │   ├── config/
-│   │   ├── security/
-│   │   ├── middleware/
-│   │   ├── logging/
-│   │   ├── observability/
-│   │   ├── database/
-│   │   ├── cache/
-│   │   ├── errors/
-│   │   └── shared/
-│   │
-│   ├── modules/
-│   │   ├── identity_access/
-│   │   ├── public_portal/
-│   │   ├── master_data/
-│   │   ├── pricing/
-│   │   ├── tbs_receiving/
-│   │   ├── contracts/
-│   │   ├── logistics/
-│   │   ├── mill_weighing/
-│   │   ├── reconciliation/
-│   │   ├── reporting/
-│   │   └── audit/
-│   │
-│   └── integrations/
-│       └── composition/
-│
-├── alembic/
-│   └── versions/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   ├── contract/
-│   ├── security/
-│   ├── performance/
-│   └── e2e/
-├── scripts/
-├── pyproject.toml
-├── uv.lock
-├── Dockerfile
-└── .env.example
+  app/
+    main.py
+    core/
+      config.py
+      database.py
+      redis.py
+      security.py
+      logging.py
+      middleware.py
+      errors.py
+    modules/
+      pricing/
+        domain/
+          entities.py
+          rules.py
+        application/
+          use_cases.py
+        infrastructure/
+          models.py
+          repository.py
+          cache.py
+        presentation/
+          routes.py
+          schemas.py
+  alembic/
+  tests/
+  pyproject.toml
+  uv.lock
 ```
 
-Seluruh folder di dalam `modules/` wajib mengikuti template empat layer.
-
-Contoh modul `reconciliation`:
-
-```text
-reconciliation/
-├── domain/
-│   ├── entities/
-│   ├── value_objects/
-│   ├── rules/
-│   ├── services/
-│   ├── events/
-│   ├── exceptions/
-│   └── ports/
-│
-├── application/
-│   ├── commands/
-│   ├── queries/
-│   ├── use_cases/
-│   ├── dto/
-│   └── interfaces/
-│
-├── infrastructure/
-│   ├── persistence/
-│   ├── repositories/
-│   ├── cache/
-│   ├── integrations/
-│   └── mappers/
-│
-├── presentation/
-│   ├── routes/
-│   ├── schemas/
-│   ├── dependencies/
-│   └── presenters/
-│
-└── __init__.py
-```
-
-Struktur ini merupakan standar minimum pembagian tanggung jawab, bukan kewajiban membuat file kosong untuk setiap subfolder.
-
-Subfolder yang tidak diperlukan tidak harus dibuat.
-
----
+Contoh pricing hanya ilustrasi. Tambah file/subfolder saat kebutuhan domain muncul, tanpa membuat struktur kosong. core/ hanya berisi konfigurasi, database/Redis clients, security infrastructure, logging, middleware, error handling, dan primitive lintas modul; business logic tetap di modul pemiliknya. Wiring repository/cache adapter konkret dilakukan eksplisit pada composition root.
 
 # 7. PEMETAAN MODUL BACKEND
 
@@ -646,111 +431,15 @@ Tidak seluruh kode harus menggunakan Design Pattern. Pattern digunakan ketika me
 
 # 9. PERFORMANCE ENGINEERING BACKEND
 
-## 9.1 Tujuan
+## 9.1 Standar Wajib
 
-Backend harus memberikan response yang efisien dengan penggunaan CPU, memori, dan koneksi database yang terkendali.
+Optimasi kode adalah persyaratan sejak desain dan implementasi. Gunakan asynchronous I/O untuk driver async; jangan jalankan blocking I/O atau komputasi CPU berat di event loop. Kelola lifecycle koneksi/client/session, connection reuse, timeout sesuai operasi, concurrency terbatas, batas request/response, pagination, dan streaming file besar bila relevan.
 
-Optimasi harus berdasarkan hasil pengukuran, bukan asumsi.
+Hindari komputasi/serialization berulang, fetch data/kolom yang tidak diperlukan, N+1 query, task tanpa lifecycle, fan-out tak terbatas, dan transaksi panjang. Pindahkan pekerjaan berat dari request path hanya bila use case membenarkannya dan status pekerjaan tersimpan durable.
 
-## 9.2 Asynchronous I/O
+## 9.2 Profiling dan Bukti
 
-Operasi I/O menggunakan pendekatan asynchronous ketika relevan.
-
-Contoh:
-
-- Query database.
-- Akses Redis.
-- Pemanggilan API PKS.
-- Operasi jaringan.
-
-Aturan:
-
-- Tidak melakukan blocking I/O di jalur async.
-- Tidak menggunakan operasi CPU berat secara langsung di event loop.
-- Tidak membuat task asynchronous tanpa pengelolaan siklus hidup.
-- Tidak membagikan satu AsyncSession ke beberapa concurrent task.
-
-## 9.3 Database Connection Pool
-
-Koneksi PostgreSQL dikelola menggunakan connection pooling.
-
-Konfigurasi pool harus mempertimbangkan:
-
-- Jumlah worker backend.
-- Kapasitas PostgreSQL.
-- Perkiraan concurrency.
-- Waktu tunggu koneksi.
-- Jumlah koneksi maksimum.
-- Pengujian beban.
-
-Ukuran pool tidak ditetapkan secara sembarangan. Nilai awal ditentukan melalui benchmarking.
-
-## 9.4 Query Optimization
-
-Wajib menghindari:
-
-- N+1 query.
-- Query tanpa filter pada data besar.
-- Fetch seluruh kolom yang tidak diperlukan.
-- Query berulang dalam satu request.
-- Pagination menggunakan seluruh data sekaligus.
-- Transaksi panjang yang menahan lock secara berlebihan.
-
-Teknik yang digunakan:
-
-- Explicit column selection.
-- Selective eager loading.
-- Pagination.
-- Indexing.
-- Query profiling.
-- EXPLAIN ANALYZE.
-- Database aggregation.
-- Bulk operation ketika sesuai.
-
-## 9.5 Pagination
-
-Endpoint daftar harus mendukung pagination.
-
-Untuk daftar sederhana digunakan pagination yang stabil.
-
-Untuk dataset transaksi besar dengan urutan konsisten, keyset/cursor pagination diprioritaskan dibanding offset besar.
-
-Setiap endpoint menentukan batas maksimal `page_size`.
-
-## 9.6 Background Processing
-
-Pekerjaan berat yang tidak harus selesai dalam response HTTP dapat diproses secara asynchronous melalui worker.
-
-Contoh:
-
-- Generasi laporan besar.
-- Ekspor data.
-- Pemrosesan dokumen.
-- Pengiriman notifikasi.
-- Perhitungan agregasi yang mahal.
-
-Penggunaan job queue hanya diwajibkan ketika diperlukan.
-
-Untuk tahap awal, proses sederhana dapat berjalan secara synchronous selama memenuhi target performa.
-
-Jika diperlukan worker persisten, gunakan solusi yang kompatibel dengan Redis dan memiliki retry, status pekerjaan, serta mekanisme idempotency.
-
-Pekerjaan keuangan kritis tidak boleh hanya mengandalkan background task tanpa penyimpanan status yang durable.
-
-## 9.7 Resource Management
-
-Sistem harus:
-
-- Menutup session database.
-- Mengatur timeout HTTP.
-- Membatasi ukuran upload.
-- Membatasi ukuran response.
-- Menghindari memory leak.
-- Tidak membuat object besar secara tidak perlu.
-- Memproses file besar secara streaming apabila relevan.
-- Menggunakan lazy loading frontend dan API secara tepat.
-
----
+Profil endpoint/jalur bisnis kritis, ukur latency/throughput/resource, lalu optimalkan bottleneck yang terbukti. Klaim performa harus menyebut environment, beban, dan hasil benchmark. Jangan membangun framework optimasi sendiri.
 
 # 10. DATABASE ENGINEERING
 
@@ -853,9 +542,13 @@ Indeks awal dipertimbangkan pada:
 
 Indeks final harus divalidasi menggunakan query plan.
 
-Terlalu banyak indeks dapat memperlambat operasi penulisan.
+Terlalu banyak indeks dapat memperlambat operasi penulisan. Gunakan composite atau partial index saat pola filter/sort dan selectivity membenarkannya; tinjau EXPLAIN ANALYZE dan biaya write sebelum menetapkan index.
 
-## 10.8 Database Migration
+## 10.8 Query, Pool, dan Transaction Safety
+
+Gunakan eager loading secara selektif, join/aggregate di database, dan pilih kolom yang diperlukan untuk menghindari N+1 query serta pemindahan data berlebihan. Semua query kritis diprofilkan dan ditinjau dengan EXPLAIN ANALYZE. Connection pool harus terbatas, dipakai ulang, memiliki timeout/wait policy, dan tidak melebihi kapasitas PostgreSQL lintas worker. Pilih isolation level sesuai invariant; gunakan row-level locking untuk kuota, alokasi, settlement, dan approval yang bersaing. Uji migration, constraint, rollback, idempotency, dan concurrency.
+
+## 10.9 Database Migration
 
 Seluruh perubahan skema database menggunakan Alembic.
 
@@ -870,89 +563,43 @@ Ketentuan:
 
 ---
 
-# 11. CACHING STRATEGY
+# 11. REDIS CACHING STRATEGY
 
-## 11.1 Tujuan
+## 11.1 Ketentuan dan Pola
 
-Redis digunakan untuk mengurangi beban pembacaan berulang dan mempercepat respons endpoint yang sesuai.
+Redis adalah komponen wajib arsitektur dan tersedia sejak B0. Cache fungsional dipakai pada use case relevan, bukan dipaksakan di semua endpoint. PostgreSQL tetap source of truth; Redis tidak menyimpan satu-satunya salinan transaksi kritis. Pola utama **cache-aside**: baca cache, ambil dari PostgreSQL saat miss/expired, lalu isi cache.
 
-Cache tidak menjadi sumber kebenaran utama transaksi bisnis.
+## 11.2 Prioritas Cache dan TTL Awal
 
-PostgreSQL tetap menjadi source of truth untuk data permanen.
+| Data | Strategi | TTL awal |
+| --- | --- | --- |
+| Harga TBS publik aktif, riwayat/ringkasan populer | Cache-aside | 30-60 detik |
+| Direktori PKS dan referensi jarang berubah | Cache-aside | 5-15 menit |
+| Profil/halaman publik | Cache-aside | 15 menit |
+| Agregasi dashboard mahal | Cache-aside dengan scope | 15-60 detik |
+| Data privat | Hanya bila profiling/manfaat jelas | Sesuai kebutuhan |
 
-## 11.2 Data yang Layak Di-cache
+TTL adalah baseline untuk diuji, bukan klaim final. Cache privat memasukkan scope/konteks akses; hasil tidak boleh dibagikan antar-scope.
 
-| Data                     | Strategi                        | Contoh TTL Awal  |
-| ------------------------ | ------------------------------- | ---------------- |
-| Harga publik aktif       | Cache-aside                     | 30–60 detik     |
-| Direktori PKS publik     | Cache-aside                     | 5–15 menit      |
-| Profil perusahaan publik | Cache-aside                     | 15 menit         |
-| Referensi dropdown       | Cache-aside                     | 5–15 menit      |
-| Agregasi dashboard       | Cache berdasarkan cakupan akses | 15–60 detik     |
-| Konfigurasi non-sensitif | Cache-aside                     | Sesuai perubahan |
+## 11.3 Key, Pool, Timeout, dan Lifecycle
 
-Nilai TTL merupakan titik awal pengujian, bukan angka final.
+Gunakan key berversi dan ternamespace, misalnya public:prices:v1:region:{region}, public:mills:v1:region:{region}, reference:v1:{type}, dan dashboard:v1:scope:{scope_id}:period:{period}. Jangan masukkan PII atau secret ke key.
 
-## 11.3 Data yang Tidak Boleh Di-cache Secara Sembarangan
+Redis client memakai connection pool terbatas, timeout connect/read, lifecycle startup/shutdown, dan konfigurasi terpusat. Pool/timeout disetel berdasarkan worker dan pengukuran; jangan membuat client per request.
 
-- Password.
-- Token autentikasi dalam cache publik.
-- Data rekening.
-- Bukti pembayaran rahasia.
-- Hasil otorisasi lintas pengguna tanpa scope.
-- Keputusan pembayaran yang belum final.
-- Data pribadi petani pada cache yang dapat diakses publik.
+## 11.4 Invalidasi dan Consistency
 
-State sesi autentikasi dapat disimpan di Redis secara aman, tetapi tidak boleh tercampur dengan cache konten publik.
+Invalidasi dilakukan setelah transaksi database berhasil di-commit. Publikasi harga menghapus atau memperbarui key terkait; perubahan direktori/referensi menginvalidasi key sesuai. Untuk kebutuhan durable lintas proses, gunakan outbox bila diperlukan. Jangan invalidasi sebelum commit.
 
-## 11.4 Cache Key Design
+## 11.5 Stampede, Monitoring, dan Testing
 
-Cache key harus memiliki struktur yang konsisten.
+Untuk key populer, gunakan TTL jitter/request coalescing; distributed lock atau stale-while-revalidate hanya bila profiling membuktikan perlu dan data aman. Catat hit, miss, error, latency, invalidation, dan rasio hit tanpa payload sensitif. Uji key isolation, TTL/expiry, hit/miss, invalidation-after-commit, fallback, dan concurrent miss pada use case relevan.
 
-Contoh:
+## 11.6 Graceful Degradation dan Security
 
-- public:prices:v1:region:{region}
-- public:mills:v1:region:{region}
-- public:profile:v1
-- dashboard:v1:scope:{scope_id}:period:{period}
+Kegagalan cache pembacaan nonkritis boleh fallback ke PostgreSQL dengan timeout serta pembatasan beban. Bila fallback tidak aman untuk kapasitas/freshness, kembalikan error terkontrol. Cache bukan sumber final keputusan transaksi.
 
-Cache yang bergantung pada hak akses harus memasukkan scope dan identitas konteks yang relevan.
-
-## 11.5 Cache Invalidation
-
-Setelah harga baru dipublikasikan:
-
-1. Transaksi database diselesaikan.
-2. Perubahan dinyatakan berhasil.
-3. Cache harga yang relevan diinvalidasi atau diperbarui.
-4. Request selanjutnya memperoleh data terbaru.
-
-Untuk proses kompleks, invalidasi dapat menggunakan mekanisme outbox yang durable.
-
-Cache tidak boleh diinvalidasi sebelum database commit secara permanen.
-
-## 11.6 Cache Stampede Protection
-
-Untuk data dengan trafik tinggi, sistem dapat menggunakan:
-
-- TTL jitter.
-- Request coalescing.
-- Lock terdistribusi yang dibatasi waktu.
-- Stale-while-revalidate pada data publik yang aman.
-
-Harga lama hanya boleh ditampilkan jika diberi keterangan jelas bahwa data belum diperbarui.
-
-## 11.7 Redis Failure Handling
-
-Jika Redis tidak tersedia:
-
-- Endpoint informasi publik dapat menggunakan fallback PostgreSQL dengan pembatasan beban.
-- Operasi bisnis penting harus tetap menjaga konsistensi database.
-- Sistem autentikasi tidak boleh mengizinkan akses secara otomatis akibat kegagalan penyimpanan sesi.
-- Rate limiting dan kontrol keamanan yang bergantung pada Redis harus menerapkan kebijakan kegagalan yang aman.
-- Kegagalan Redis dicatat dalam monitoring.
-
----
+Komponen keamanan gagal secara **fail-closed**: kegagalan session store berarti akses terautentikasi ditolak; kegagalan rate-limit state menerapkan batas aman lokal atau menolak operasi sensitif sesuai kebijakan. Kegagalan cache tidak mengubah authorization atau konsistensi transaksi. Catat Redis error dengan Request ID tanpa secret.
 
 # 12. AUTHENTICATION DAN AUTHORIZATION
 
@@ -1277,7 +924,7 @@ Dashboard teknis dapat menampilkan:
 - Slow endpoints.
 - Database connection usage.
 - Redis availability.
-- Cache hit ratio.
+- Cache hit/miss count, hit ratio, dan cache error rate.
 - Failed login attempts.
 - Queue failures jika ada.
 - Jumlah konflik transaksi.
@@ -1566,85 +1213,24 @@ Contoh:
 
 # 18. STRUKTUR FOLDER FRONTEND
 
-```text
-frontend/
-├── src/
-│   ├── app/
-│   │   ├── providers/
-│   │   ├── router/
-│   │   ├── layouts/
-│   │   └── config/
-│   │
-│   ├── components/
-│   │   ├── atoms/
-│   │   ├── molecules/
-│   │   ├── organisms/
-│   │   └── templates/
-│   │
-│   ├── features/
-│   │   ├── auth/
-│   │   ├── public-pricing/
-│   │   ├── public-mills/
-│   │   ├── farmers/
-│   │   ├── cooperatives/
-│   │   ├── tbs-receiving/
-│   │   ├── contracts/
-│   │   ├── logistics/
-│   │   ├── mill-weighing/
-│   │   ├── reconciliation/
-│   │   ├── payments/
-│   │   └── reporting/
-│   │
-│   ├── pages/
-│   │   ├── public/
-│   │   ├── auth/
-│   │   └── internal/
-│   │
-│   ├── hooks/
-│   ├── lib/
-│   │   ├── api/
-│   │   ├── validation/
-│   │   ├── formatting/
-│   │   └── utils/
-│   ├── styles/
-│   ├── types/
-│   ├── assets/
-│   └── main.tsx
-│
-├── tests/
-├── public/
-├── package.json
-├── vite.config.ts
-└── tsconfig.json
+```
+frontend/src/
+  app/                 # providers, router, config
+  components/          # atoms, molecules, organisms, templates yang shared
+  features/            # auth, pricing, master-data, receiving, contracts,
+                       # logistics, mill-weighing, reconciliation, payments
+  pages/               # public dan internal page composition
+  lib/                 # API client dan utilities lintas fitur
+  hooks/               # hook lintas fitur
+  styles/              # Tailwind dan design tokens
+  main.tsx
 ```
 
-Feature folder dapat memiliki:
+Fitur dapat memiliki components/, api/, hooks/, schemas/, types/, dan tests/ sesuai kebutuhan. Komponen khusus satu fitur tetap tinggal di fitur tersebut. Jadikan shared hanya setelah ada penggunaan lintas fitur. Hindari circular dependencies dan wrapper tanpa manfaat.
 
-- api.
-- components.
-- hooks.
-- schemas.
-- types.
-- utils.
-- tests.
+## 18.1 Atomic Design
 
-Komponen yang hanya dipakai dalam satu fitur disimpan pada folder fitur tersebut.
-
-Komponen bersama yang benar-benar digunakan lintas fitur dapat ditempatkan pada Atomic Design components.
-
-## 18.1 Aturan Struktur
-
-- Atoms tidak boleh bergantung pada Pages.
-- Molecules dapat mengimpor Atoms.
-- Organisms dapat mengimpor Atoms dan Molecules.
-- Templates dapat mengimpor komponen dari level di bawahnya.
-- Pages menggunakan Templates dan komponen yang relevan.
-- Logika API tidak ditulis langsung dalam seluruh komponen visual.
-- Komponen UI bersama tidak boleh mengimpor seluruh feature.
-- Hindari circular dependencies.
-- Hindari satu file komponen yang terlalu besar.
-
----
+Kelima level tetap berlaku: **Atoms** adalah elemen dasar tanpa business logic; **Molecules** menggabungkan atoms untuk tugas kecil; **Organisms** menyusun bagian UI kompleks; **Templates** menentukan kerangka/layout; **Pages** menggabungkan template dengan konten dan data fitur. Atomic Design mengatur komposisi visual, sedangkan Feature-Based Organization menentukan kepemilikan business logic. Backend tetap sumber kebenaran aturan bisnis.
 
 # 19. FRONTEND STATE MANAGEMENT
 
@@ -2005,9 +1591,7 @@ Sebelum penggabungan perubahan kode:
 - Build frontend lulus.
 - Tidak ada secret dalam repository.
 
-Target cakupan pengujian awal dapat ditetapkan minimal 80% pada Domain dan Application Layer, dengan seluruh aturan bisnis kritis tercakup oleh skenario pengujian yang bermakna.
-
-Coverage bukan satu-satunya indikator kualitas.
+Architecture, unit, integration, API contract, security, concurrency, Redis cache, migration/rollback, dan E2E tests adalah quality gates wajib pada milestone atau scope yang relevan. Coverage dilaporkan sebagai sinyal, bukan angka universal pengganti pengujian invariant bisnis.
 
 ---
 
@@ -2019,7 +1603,7 @@ Mengukur kemampuan sistem dalam menangani beban operasional secara konsisten.
 
 ## 24.2 Alat
 
-Locust dapat digunakan untuk load testing.
+Benchmark/load test wajib pada milestone hardening dan milestone yang mengubah jalur kritis; Locust atau alat setara digunakan dengan beban yang dicatat. Perubahan UI kecil tidak memicu full load test.
 
 Pengujian database menggunakan query profiling dan EXPLAIN ANALYZE.
 
@@ -2069,7 +1653,7 @@ Liveness menunjukkan proses aplikasi berjalan.
 
 Readiness memeriksa apakah aplikasi siap melayani operasi yang diperlukan.
 
-Pemeriksaan readiness dapat mempertimbangkan PostgreSQL dan komponen penting lainnya.
+Readiness memeriksa PostgreSQL dan Redis yang menjadi dependensi wajib. Liveness hanya menunjukkan proses aplikasi hidup; kegagalan Redis tidak menyamarkan keadaan readiness.
 
 ## 25.2 Metrics
 
@@ -2081,7 +1665,7 @@ Metrik yang dianjurkan:
 - Active database connections.
 - Database query latency.
 - Redis availability.
-- Cache hit ratio.
+- Cache hit/miss count, hit ratio, dan cache error rate.
 - Background job failures.
 - Application memory usage.
 - Application CPU usage.
@@ -2394,55 +1978,3 @@ Seluruh rancangan diarahkan untuk mendukung pengembangan prototipe yang terukur,
 - OWASP ASVS — https://owasp.org/www-project-application-security-verification-standard/
 
 **Akhir Dokumen — Technical Requirements Document V1.1**
-
-# 33. SOLO DEVELOPER ARCHITECTURE PRINCIPLES V1.1
-
-Bagian ini mengikat pilihan teknis. Jika daftar tool atau quality gate sebelumnya menyatakan komponen opsional sebagai wajib, klasifikasi di sini yang berlaku.
-
-## 33.1 Prinsip Implementasi
-
-- **Modular Monolith + Clean Architecture + SOLID** tetap wajib. Setiap modul bisnis memiliki `domain/`, `application/`, `infrastructure/`, dan `presentation/` di dalam modul tersebut.
-- Terapkan SOLID secara pragmatis: tanggung jawab jelas, domain bebas HTTP/ORM, dependency inversion pada batas yang memberi manfaat pengujian atau variasi. Buat interface hanya bila dibutuhkan; hindari generic repository, inheritance, wrapper, factory, dan container tanpa tanggung jawab nyata.
-- Struktur ringan: entities/rules pada Domain, use cases pada Application, ORM/repository pada Infrastructure, route/schema pada Presentation. Tambah file berdasarkan kebutuhan nyata, bukan folder kosong.
-- Dependency mengarah Presentation → Application → Domain; Infrastructure mengimplementasikan port yang diperlukan. Wiring eksplisit pada composition root dan FastAPI dependencies cukup sebagai DI baseline.
-- `core` hanya untuk konfigurasi, session database, security infrastructure, logging, middleware, error, cache utility, dan primitive lintas modul. Business logic tetap dimiliki modul.
-- Pertahankan PostgreSQL, SQLAlchemy, Alembic, constraint, transaksi, pooling, dan migrasi incremental. Optimasi berdasarkan profiling: kebenaran query, indeks relevan, pagination, transaksi, concurrency, lalu cache.
-
-Contoh ilustratif: `backend/app/modules/pricing/{domain,application,infrastructure,presentation}/`. Struktur ini tidak mewajibkan file atau folder kosong.
-
-## 33.2 Security dan Observability Baseline
-
-Tetap wajib: server-side session, cookie HttpOnly, CSRF protection, RBAC dan scope authorization, Argon2id, validasi input, rate limiting, least privilege, secure file handling, serta audit transaksi penting. Kegagalan cache tidak boleh melewati autentikasi atau mengubah hasil transaksi.
-
-Middleware minimum: Request ID, HTTP access log terstruktur, durasi, status, module/error code, exception handler, health checks, security event log, dan business audit trail. Jangan log password, token, cookie, rekening, PII lengkap, atau payload sensitif. Request ID dapat digunakan pengguna untuk menelusuri error.
-
-`structlog` atau logging terstruktur setara adalah baseline. Prometheus, Grafana, Loki, OpenTelemetry, dan tracing backend ditambahkan saat manfaat operasional terukur; bukan prasyarat prototipe lokal.
-
-## 33.3 Klasifikasi Teknologi
-
-| Status | Teknologi / kemampuan | Ketentuan |
-| --- | --- | --- |
-| Required | FastAPI, PostgreSQL, SQLAlchemy, Alembic, React, TypeScript, Vite, Atomic Design, OpenAPI | Stack baseline dan kontrak bersama |
-| Required | Pydantic, pytest, Ruff, structured logging, session security, migrations | Terapkan seperlunya; konfigurasi dan lockfile minimal |
-| Conditional | Redis, HTTPX, MapLibre, TanStack Table, satu chart library, object storage, background worker | Hanya bila use case tersedia; aplikasi dan tes dasar tetap berjalan tanpa cache Redis |
-| Conditional | TanStack Query, React Hook Form, Zod, router pilihan, shadcn/ui, Lucide, Vitest, React Testing Library, Playwright, MSW | Pilih sesuai kebutuhan; hindari duplikasi fungsi |
-| Conditional | Zustand | Hanya jika shared client state tidak nyaman ditangani lokal/server state |
-| Deferred | Prometheus/Grafana/Loki/OpenTelemetry stack, HA kompleks, bank settlement otomatis | Tunda sampai kebutuhan terukur dan disetujui |
-
-Jangan gunakan dua library chart atau state management untuk fungsi sama. Coverage 80% bukan gate universal; prioritaskan tes aturan kritis.
-
-## 33.4 Redis dan Database
-
-PostgreSQL adalah source of truth. Redis didukung sebagai optimasi opsional untuk kandidat seperti harga publik, direktori PKS, atau agregasi dashboard setelah manfaat diukur. Cache memiliki TTL, invalidation, timestamp, dan fallback aman. Kegagalan Redis tidak membuat transaksi hilang atau memperlonggar otorisasi.
-
-## 33.5 Frontend dan UX
-
-React + TypeScript menggunakan Feature-Based Organization dan Atomic Design lima level: Atoms (tanpa business logic), Molecules, Organisms, Templates, Pages. Komponen satu fitur tinggal di fitur tersebut; shared component hanya untuk penggunaan lintas fitur. Backend menjadi sumber kebenaran aturan bisnis.
-
-Pertahankan 25 prinsip UX, golden ratio sebagai pedoman komposisi fleksibel, micro-interactions fungsional, mobile-first Portal Publik, dashboard internal responsif, accessibility, reduced motion, serta loading/empty/error/success state. Terapkan berdasarkan relevansi, bukan checklist mekanis setiap komponen.
-
-## 33.6 Testing dan Quality Gates
-
-Backend memprioritaskan domain unit, use case, database integration, API contract, auth/scope, concurrency pada operasi kritis, dan end-to-end. Frontend memprioritaskan typecheck, interaksi/form penting, MSW workflow, browser journey utama, responsive/accessibility, dan production build. Fokus risiko tinggi: harga, berat, grading, kontrak, kuota, e-DO, rekonsiliasi, settlement, pembayaran, dan akses. Hindari tes CRUD berulang yang menguji perilaku sama. Performance benchmark dijalankan pada milestone relevan, bukan blocker styling.
-
-Setiap milestone memiliki objective, scope, acceptance criteria, tes relevan, evidence, PASS/FAIL, dan regression check. Kekuatan bukti menyesuaikan risiko.

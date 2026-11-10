@@ -1674,65 +1674,23 @@ Hasil evaluasi perlu dijelaskan sesuai keterbatasan ukuran dan karakteristik sam
 
 # 23. PRIORITAS PENGEMBANGAN
 
-Prioritas menggunakan kategori Must Have, Should Have, Could Have, dan Won't Have for Now.
+## 23.1 Core MVP
 
-## 23.1 Must Have — Wajib
+Core MVP membuktikan integrasi rantai pasok dan mencakup Portal Publik, harga multi-PKS terverifikasi, harga acuan Disbun bila tersedia, lokasi PKS, informasi Perumda/kemitraan, autentikasi dan RBAC dengan scope, master data petani/koperasi/PKS, harga internal, penerimaan dan penimbangan, grading sesuai aturan tervalidasi atau simulasi berlabel, kontrak dan kuota, e-DO/logistik, tiket PKS, rekonsiliasi dan dispute, pencatatan settlement/pembayaran sesuai SOP yang disahkan, dashboard inti, serta audit transaksi penting.
 
-- Portal Publik tanpa login.
-- Login dan otorisasi internal.
-- Master data petani, koperasi, PKS, dan kebun.
-- Informasi harga multi-PKS.
-- Verifikasi serta publikasi harga.
-- Perbandingan harga.
-- Informasi lokasi PKS.
-- Penerimaan TBS.
-- Penimbangan dan grading.
-- Kontrak dan kuota.
-- e-DO.
-- Tiket timbang PKS.
-- Rekonsiliasi.
-- Perhitungan dan status pembayaran.
-- Dashboard operasional.
-- Audit aktivitas penting.
-- Pengujian fungsional.
-- Skenario bisnis end-to-end.
+Alur demonstrasi wajib tetap: **Petani ? Koperasi ? Perumda/Proses Niaga ? PKS ? Rekonsiliasi ? Penagihan/Pembayaran ? Pelaporan.** Pembayaran baseline berarti pencatatan, verifikasi, dan persetujuan sesuai kewenangan; sistem tidak melakukan transfer dana otomatis.
 
-## 23.2 Should Have — Sangat Dianjurkan
+## 23.2 Research Evaluation
 
-- Riwayat harga.
-- Grafik tren harga.
-- Ekspor laporan.
-- QR Code e-DO.
-- Unggah bukti tiket timbang.
-- Bukti pembayaran digital.
-- Filter lokasi PKS.
-- Dashboard khusus Direksi.
-- Pengukuran durasi proses operasional.
-- Optimasi pengalaman mobile.
+Demonstrasi end-to-end, pengujian fungsional, UAT/SUS sesuai metode penelitian, serta pengukuran waktu, kesalahan, kelengkapan, dan keterlacakan merupakan kegiatan evaluasi DSRM. Evaluasi tidak menetapkan aturan operasional baru.
 
-## 23.3 Could Have — Pengembangan Tambahan
+## 23.3 Future Enhancements
 
-- Notifikasi perubahan harga.
-- Notifikasi status pengiriman.
-- Integrasi API harga PKS.
-- Perbandingan estimasi margin antar-PKS.
-- Perhitungan estimasi biaya logistik.
-- Fitur pencarian PKS berdasarkan jarak.
-- Ekspor dokumen ke berbagai format.
-- Pengingat kontrak berakhir.
+Integrasi API PKS otomatis, GPS langsung, prediksi harga AI, analitik lanjutan, notifikasi tingkat lanjut, settlement bank otomatis, observability terdistribusi, dan high availability produksi penuh ditunda sampai kebutuhan, akses, persetujuan, serta kapasitas terverifikasi. Transfer bank otomatis dan kendali mesin timbang tetap di luar baseline tesis.
 
-## 23.4 Won't Have for Now — Tidak Dikembangkan Saat Ini
+## 23.4 Prioritas Requirement
 
-- AI prediksi harga.
-- GPS real-time.
-- Transfer bank otomatis.
-- Marketplace jual beli sawit terbuka.
-- Integrasi seluruh PKS nasional.
-- Aplikasi mobile native terpisah.
-- Pengendalian perangkat timbangan industri.
-- ERP untuk unit Listrik dan Gas.
-
----
+Pertahankan seluruh ID FR yang ada. Beri label Core MVP, Research Evaluation, Conditional, atau Future pada backlog dan acceptance criteria; label tidak mengganti ID. Keputusan bisnis yang belum disahkan tidak boleh diperlakukan sebagai kebutuhan resmi Perumda.
 
 # 24. TAHAPAN IMPLEMENTASI
 
@@ -2039,23 +1997,3 @@ PRD ini menjadi baseline kebutuhan yang akan diturunkan menjadi rancangan teknis
 **Status akhir dokumen: DRAFT PRD V1.1 — SIAP MENJADI DASAR PENYUSUNAN TRD, DENGAN SEJUMLAH KEPUTUSAN OPERASIONAL YANG MASIH MEMERLUKAN VALIDASI.**
 
 **Akhir Dokumen — Product Requirements Document V1.1**
-
-# 32. BASELINE PRIORITAS V1.1
-
-Bagian ini melengkapi prioritas pada Bagian 23–24. ID requirement yang sudah ada tetap berlaku. Fitur inti adalah Core MVP; evaluasi penelitian dan future enhancement tidak menggantikan alur rantai pasok inti.
-
-## 32.1 Core MVP
-
-Core MVP mencakup Portal Publik (harga multi-PKS terverifikasi, harga acuan Disbun bila tersedia, lokasi PKS, profil dan kemitraan), autentikasi dan RBAC dengan scope, master data petani/koperasi/PKS, harga internal, penerimaan dan penimbangan, grading sesuai aturan tervalidasi atau konfigurasi simulasi berlabel, kontrak dan kuota, e-DO/logistik, tiket timbang PKS, rekonsiliasi dan dispute, pencatatan settlement serta pembayaran sesuai kebijakan tervalidasi, dashboard inti, dan audit transaksi penting.
-
-Alur yang harus dapat didemonstrasikan tetap: **Petani → Koperasi → Perumda/Proses Niaga → PKS → Rekonsiliasi → Penagihan/Pembayaran → Pelaporan.**
-
-## 32.2 Research Evaluation
-
-Evaluasi DSRM, demonstrasi end-to-end, pengujian fungsional, UAT/SUS sesuai metode penelitian, serta pengukuran waktu, kesalahan, kelengkapan, dan keterlacakan adalah keluaran evaluasi, bukan kebijakan bisnis baru.
-
-## 32.3 Future Enhancements
-
-Integrasi API PKS otomatis, GPS langsung, prediksi harga AI, analitik lanjutan, notifikasi tingkat lanjut, settlement bank otomatis, observability terdistribusi, dan high availability produksi penuh ditunda sampai kebutuhan, akses, persetujuan, dan kapasitas terverifikasi. Transfer bank otomatis dan kendali mesin timbang berada di luar baseline tesis.
-
-Gunakan label Core MVP, Research Evaluation, Conditional, atau Future pada backlog dan acceptance criteria. Pembayaran MVP berarti pencatatan, verifikasi, dan persetujuan sesuai SOP yang tersedia; aplikasi tidak mengklaim melakukan transfer dana.

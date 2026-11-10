@@ -309,9 +309,28 @@ Sistem tidak boleh mengubah makna tanggal transaksi ketika melakukan konversi ti
 
 **Jumlah: 48 tabel kandidat pada model logis awal.**
 
-Jumlah ini merupakan inventaris desain, bukan kewajiban membuat seluruh tabel sekaligus pada migrasi pertama. Tabel yang tidak diperlukan pada scope MVP dapat ditunda, selama kontrak bisnis inti tetap terpenuhi.
+### 4.11 Tahapan Tabel
 
----
+Inventaris 48 kandidat bukan migrasi awal tunggal. Tabel dibuat incremental bersama milestone pemilik data. Semua kandidat tetap dipertimbangkan; tidak ada penghapusan otomatis.
+
+#### Core MVP Tables
+
+Buat mengikuti dependensi modul:
+- Identitas: user_accounts, roles, permissions, role_permissions, user_role_grants, user_access_scopes, auth_sessions.
+- Pihak/master data: parties, farmers, farms, cooperatives, cooperative_memberships, mill_companies, mills.
+- Harga: price_sources, price_categories, mill_price_quotes, price_verification_events.
+- Penerimaan: tbs_receipts, receipt_weighing_revisions, receipt_grading_items.
+- Kontrak, kuota, logistik: trade_contracts, contract_quota_periods, quota_reservations, delivery_orders, delivery_order_lines, delivery_status_events.
+- Tiket, penyelesaian, keuangan: mill_weighing_tickets, mill_grading_items, reconciliation_cases, dispute_reviews, farmer_settlement_allocations, invoices, invoice_lines, payment_approvals, payment_records.
+- Kontrol: audit_events, idempotency_records.
+
+#### Supporting Tables Added by Milestone
+
+Tambahkan saat use case modul terkait siap: perumda_offices, vehicles, drivers, disbun_reference_prices, file_assets, system_rule_versions, outbox_events, user_notifications, public_pages, dan public_notices.
+
+#### Deferred/Conditional Tables
+
+Tabel pendukung di atas dapat ditunda sampai milestone menetapkan kebutuhan dan acceptance criteria. Integrasi eksternal, outbox/asynchronous delivery, konten yang dikelola internal, notifikasi, dan storage berkas adalah use case bersyarat. Penundaan tidak berlaku untuk tabel/constraint yang diperlukan menjaga integritas transaksi, histori, audit, idempotency, dan pembayaran. Setiap migrasi tetap incremental dan diuji.
 
 # 5. ENTITY RELATIONSHIP MODEL
 
@@ -926,6 +945,13 @@ Kolom:
 - price_rule_type.
 - agreed_price_per_kg NULL.
 - grading_policy_reference.
+- business_model_code (PRINCIPAL, AGENT, UNCONFIRMED).
+- perumda_role (BUYER, SELLER, AGENT, UNCONFIRMED).
+- seller_party_id FK.
+- buyer_party_id FK.
+- agent_party_id FK NULL.
+- represented_party_id FK NULL.
+- business_model_rule_version FK (snapshot versi kebijakan).
 - payment_terms.
 - status.
 - approved_by NULL.
@@ -934,6 +960,10 @@ Kolom:
 - updated_at.
 
 Harga kontrak dan harga publik adalah data berbeda.
+
+Setiap kontrak menyimpan para pihak dan kapasitas Perumda secara eksplisit. Model usaha resmi tetap Pending SOP Validation sampai disahkan; UNCONFIRMED hanya untuk rancangan dan tidak dapat menghasilkan invoice final atau settlement. Invoice menyimpan snapshot model dan versi rule yang sama dengan kontrak/transaksi terkait; perubahan kontrak tidak mengubah histori finansial. Bila Perumda menjadi principal, buyer/seller pada kontrak menentukan transaksi pembelian atau penjualan serta kewajiban berbeda. Bila sebagai agent, kontrak mengidentifikasi principal yang diwakili, pihak lawan, dan Perumda sebagai agent; nilai pokok TBS tidak otomatis dicatat sebagai pendapatan Perumda. Snapshot model dan versi kebijakan disimpan pada kontrak/transaksi untuk menjaga histori. Constraint memvalidasi kombinasi pihak menurut model dan peran: mode AGENT wajib mengisi agent_party_id dan represented_party_id; mode PRINCIPAL tidak menggunakan represented_party_id dan menandai Perumda pada buyer_party_id atau seller_party_id sesuai kontrak.
+
+Satu rantai pengiriman dapat merujuk kontrak pemasok dan kontrak PKS yang berbeda. Jangan menyimpulkan satu model usaha untuk seluruh organisasi dari satu kontrak.
 
 ## 10.2 Tabel `contract_quota_periods`
 
@@ -1237,6 +1267,8 @@ Kolom:
 - invoice_type.
 - creditor_party_id FK.
 - debtor_party_id FK.
+- business_model_code (PRINCIPAL, AGENT, UNCONFIRMED).
+- business_model_rule_version_id FK.
 - reconciliation_case_id FK NULL.
 - invoice_date.
 - due_date NULL.
@@ -1283,13 +1315,16 @@ Kolom:
 - requested_at.
 - decided_at NULL.
 
-## 14.5 Tabel `payment_records`
+## 14.5 Tabel payment_records
 
 Kolom:
 
 - id.
 - payment_number UNIQUE.
 - invoice_id FK.
+- payment_direction (INBOUND, OUTBOUND).
+- payer_party_id FK.
+- payee_party_id FK.
 - amount NUMERIC(20,2).
 - payment_date.
 - payment_method.
@@ -1308,6 +1343,8 @@ Status:
 - VERIFIED.
 - REJECTED.
 - REVERSED.
+
+Arah dinyatakan dari perspektif Perumda dan para pihak wajib cocok dengan invoice. INBOUND berlaku bila Perumda adalah creditor: payer adalah debtor dan payee adalah creditor. OUTBOUND berlaku bila Perumda adalah debtor: payer adalah debtor dan payee adalah creditor. Identitas pihak pada invoice, payment record, dan relasi party Perumda harus cocok; constraint/validasi aplikasi menolak pasangan yang tidak cocok. Setiap payment record mengacu pada invoice; status pembayaran tidak menggantikan status timbang atau pengiriman. Arah ini mengklasifikasikan arus dana, bukan menetapkan model usaha atau SOP pembayaran.
 
 ## 14.6 Aturan Pembayaran
 
@@ -2777,34 +2814,3 @@ Rancangan database dan kebutuhan antarmuka dalam dokumen ini menjadi dasar imple
 **DOKUMEN SELANJUTNYA: BUSINESS SYSTEM DOCUMENT (BSD)**
 
 **Akhir Dokumen — Database Design Document V1.1**
-
-# 41. INCREMENTAL DATABASE BASELINE V1.1
-
-Inventaris 48 nama pada Bagian 4 adalah kandidat model logis, bukan instruksi membuat 48 tabel pada migrasi pertama. Tabel dikerjakan bersama milestone modul pemiliknya. Integritas, auditability, dan keselamatan transaksi tetap wajib.
-
-## 41.1 Core MVP Tables
-
-Tabel inti untuk identitas dan alur demo minimum: `user_accounts`, `roles`, `permissions`, `role_permissions`, `user_role_grants`, `user_access_scopes`, `auth_sessions`; master aktor: `parties`, `farmers`, `farms`, `cooperatives`, `cooperative_memberships`, `mill_companies`, `mills`; harga: `price_sources`, `price_categories`, `mill_price_quotes`, `price_verification_events`; penerimaan: `tbs_receipts`, `receipt_weighing_revisions`, `receipt_grading_items`; kontrak/kuota/e-DO: `trade_contracts`, `contract_quota_periods`, `quota_reservations`, `delivery_orders`, `delivery_order_lines`, `delivery_status_events`; PKS/reconciliation/keuangan: `mill_weighing_tickets`, `mill_grading_items`, `reconciliation_cases`, `dispute_reviews`, `farmer_settlement_allocations`, `invoices`, `invoice_lines`, `payment_approvals`, `payment_records`; kontrol minimum: `audit_events`, `idempotency_records`.
-
-Kelompok tersebut tetap dijadwalkan per dependensi, bukan satu migrasi besar. Jika prototipe mendemonstrasikan pembayaran, catat jenis arus masuk/keluar dan statusnya secara eksplisit tanpa menyamakan status pembayaran dengan timbang.
-
-## 41.2 Supporting Tables Added by Milestone
-
-Tambahkan sesuai fitur yang benar-benar dikerjakan: `perumda_offices`, `vehicles`, `drivers` (master/logistik); `disbun_reference_prices` (harga acuan); `file_assets` (lampiran dengan kontrol akses); `system_rule_versions` (snapshot versi aturan bila diperlukan untuk reproduksi historis); `outbox_events` (hanya bila integrasi/asinkron memerlukannya); `user_notifications` (notifikasi dalam aplikasi); `public_pages` dan `public_notices` (bila konten perlu dikelola dari aplikasi).
-
-## 41.3 Deferred/Conditional
-
-Tidak ada nama tabel dari inventaris 48 yang otomatis dibuang. Tabel pendukung di atas bersyarat terhadap scope. Integrasi eksternal, workflow notifikasi, outbox, konten CMS, dan storage tambahan ditunda sampai milestone terkait menetapkan use case dan acceptance criteria. Tinjau kandidat lain bersama pemilik modul bila tidak dibutuhkan MVP; perubahan harus memperbarui traceability dan memakai migrasi aman.
-
-## 41.4 Migrasi dan Konsistensi Bisnis
-
-- Buat migrasi Alembic bersama milestone data; jalankan upgrade dan integration test serta tinjau downgrade bila aman. Jangan membuat seluruh skema di awal.
-- FK, unique/check constraints, indeks berbasis query, transaksi, dan concurrency control tetap wajib untuk aturan kritis.
-- Harga transaksi, berat, grading, toleransi, dan versi rule yang dipakai disimpan sebagai snapshot/referensi immutable agar perubahan harga publik atau aturan baru tidak mengubah histori.
-- Rekonsiliasi menyimpan kasus dan riwayat keputusan/ulangan. Alokasi multi-petani dapat ditelusuri ke penerimaan serta metode yang disahkan; formula simulasi bukan SOP.
-- Pembayaran memiliki arah (masuk/keluar), pihak, referensi, nominal presisi finansial, verifikasi/approval dan status terpisah dari timbang. Tidak ada asumsi transfer otomatis.
-- Idempotency dan constraint mencegah efek ganda; transaksi dan locking/strategi concurrency menjaga kuota serta alokasi.
-
-## 41.5 Batas Panduan UI
-
-Data UI mendukung loading, empty, error, success, validasi, dan aksesibilitas. Atomic Design lima level, 25 prinsip UX, golden ratio fleksibel, dan micro-interactions dijelaskan pada TRD sebagai pedoman visual. DBD menetapkan kebutuhan data dan tidak menduplikasi panduan UI.

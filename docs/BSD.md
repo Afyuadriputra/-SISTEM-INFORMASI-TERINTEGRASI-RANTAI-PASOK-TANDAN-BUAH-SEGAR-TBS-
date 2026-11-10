@@ -55,15 +55,16 @@ Hubungan dokumen:
 - **BSD menetapkan aturan dan keputusan bisnis.**
 - IPD menetapkan tahapan implementasi serta pengujian.
 
-Tidak semua aturan di dalam BSD merupakan SOP yang sudah berlaku di Perumda.
+Tidak semua aturan dalam BSD merupakan SOP Perumda. Setiap aturan memakai salah satu status berikut dan status dicatat bersama sumber, pemilik keputusan, serta tanggal peninjauan bila tersedia:
 
-Aturan dibedakan menjadi:
+| Status | Makna |
+| --- | --- |
+| **Confirmed Business Rule** | Didukung SOP, kontrak, regulasi, atau konfirmasi pemilik proses yang terdokumentasi. |
+| **Prototype Simulation Rule** | Nilai/perilaku untuk demonstrasi terkontrol; bukan ketentuan resmi Perumda. |
+| **Pending SOP Validation** | Menunggu keputusan Perumda atau mitra; implementasi tidak boleh menganggap nilai resmi. |
+| **Future Business Rule** | Di luar baseline sampai ada kebutuhan, otorisasi, dan scope yang disetujui. |
 
-**Baseline Sistem:** Aturan rancangan yang diperlukan agar prototipe konsisten dan dapat diuji.
-
-**Aturan Bersyarat:** Aturan yang hanya diterapkan setelah data atau kondisi tertentu tersedia.
-
-**Perlu Validasi SOP:** Aturan operasional yang belum dapat dinyatakan final sebelum mendapat konfirmasi dari Perumda atau mitra terkait.
+Rancangan tanpa bukti konfirmasi berstatus Pending SOP Validation. Contoh angka/formula yang digunakan pada demo diberi status Prototype Simulation Rule.
 
 ## 1.3 Batasan
 
@@ -2458,26 +2459,3 @@ BSD ini menjadi dasar implementasi business logic pada Domain Layer setiap modul
 - Proposal Tesis Givo Vrabora Revisi Final V2.
 
 **Akhir Dokumen — Business System Document V1.1**
-
-# 39. STATUS PENGESAHAN ATURAN BISNIS V1.1
-
-Bagian ini memberi klasifikasi otoritatif pada aturan sebelumnya. Detail rumus dan alur adalah rancangan, bukan bukti SOP Perumda telah mengesahkannya.
-
-| Klasifikasi | Arti dan penggunaan |
-| --- | --- |
-| **Confirmed Business Rule** | Didukung SOP, kontrak, regulasi, atau konfirmasi pemilik proses terdokumentasi. Catat sumber, tanggal, dan pemberi konfirmasi sebelum menyebutnya resmi. |
-| **Prototype Simulation Rule** | Perilaku untuk demonstrasi terkontrol; beri label dan jangan klaim sebagai ketentuan Perumda. |
-| **Pending SOP Validation** | Menunggu keputusan Perumda/mitra. Jangan mengasumsikan nilai resmi. |
-| **Future Business Rule** | Bukan baseline tesis; jangan diterapkan sampai ada otorisasi dan scope. |
-
-## 39.1 Keputusan yang Belum Disahkan
-
-Gunakan **Pending SOP Validation** untuk: model principal/agent; hubungan hukum dan kontrak; penerapan harga acuan; kategori harga publik; petugas verifikasi harga; formula grading dan potongan; basis serta toleransi kuota/timbang; toleransi 1,5% (hanya contoh); penerbit/pengesah e-DO; muatan ditolak; jumlah tiket final; penyelesai dispute dan SLA; dasar harga settlement; pihak tertagih; metode alokasi hasil multi-petani; matriks otorisasi pembayaran; pembayaran parsial; bukti status pembayaran petani; serta retensi data/audit. Ambang persetujuan pembayaran mengikuti SOP resmi.
-
-Formula contoh, termasuk metode proporsional multi-petani, adalah **Prototype Simulation Rule** bila dipakai menguji aplikasi. Jangan mengklaimnya sebagai metode resmi. Formula grading menjadi Confirmed hanya setelah sumber resmi dicatat.
-
-## 39.2 Aturan Implementasi dan Traceability
-
-Tidak ada formula bisnis yang diubah tanpa dasar. Pertahankan snapshot harga/rule historis, riwayat rekonsiliasi dan keputusan, alokasi yang dapat ditelusuri, pemisahan pembayaran masuk/keluar, pemisahan status timbang/pengiriman/pembayaran, idempotency, least-privilege, dan audit transaksi penting. Pembayaran hanya dicatat/diverifikasi sesuai kewenangan tervalidasi; tidak ada asumsi transfer bank otomatis.
-
-Setiap rule demonstrasi memiliki label klasifikasi dan test scenario. Perubahan status menyimpan aktor, waktu, alasan, dan referensi yang diperlukan. Flow AFD, entitas/constraint DBD, requirement PRD, dan milestone IPD mengacu pada rule yang sama. Status konfirmasi tidak dinaikkan berdasarkan asumsi implementasi.
