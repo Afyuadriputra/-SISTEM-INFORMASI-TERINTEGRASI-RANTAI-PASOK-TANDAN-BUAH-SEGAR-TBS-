@@ -1,0 +1,163 @@
+{
+  "fixture_meta": {
+    "policy_classification": "PENDING_SOP",
+    "note": "Memisahkan faktur AR (PKS->Perumda) vs AP (Perumda->Koperasi), status APPROVED != PAID (BR-PAY-010), pembayaran masuk vs keluar, dan blokir settlement bila UNCONFIRMED/DISPUTE."
+  },
+  "file_assets": [
+    {
+      "id": "a0000000-0000-4000-8000-000000000901",
+      "original_filename": "edaran-harga-pks-simulasi.pdf",
+      "mime_type": "application/pdf",
+      "size_bytes": 124500,
+      "checksum": "sha256:sim001abcdef0123456789",
+      "classification": "PRICE_EVIDENCE",
+      "uploaded_by": "10000000-0000-4000-8000-000000000005",
+      "created_at": "2026-11-10T01:20:00Z"
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000902",
+      "original_filename": "tiket-wb-pkc-9941-simulasi.jpg",
+      "mime_type": "image/jpeg",
+      "size_bytes": 245100,
+      "checksum": "sha256:sim002abcdef0123456789",
+      "classification": "MILL_TICKET_PROOF",
+      "uploaded_by": "10000000-0000-4000-8000-000000000009",
+      "created_at": "2026-11-10T03:45:00Z"
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000903",
+      "original_filename": "bukti-terima-ar-simulasi.pdf",
+      "mime_type": "application/pdf",
+      "size_bytes": 182400,
+      "checksum": "sha256:sim003abcdef0123456789",
+      "classification": "PAYMENT_PROOF",
+      "uploaded_by": "10000000-0000-4000-8000-000000000007",
+      "created_at": "2026-11-10T05:00:00Z"
+    }
+  ],
+  "invoices": [
+    {
+      "id": "a0000000-0000-4000-8000-000000000001",
+      "invoice_number": "INV-AR-2026-1110-001",
+      "invoice_type": "ACCOUNTS_RECEIVABLE",
+      "creditor_party_id": "10000000-0000-4000-8000-000000000100",
+      "debtor_party_id": "10000000-0000-4000-8000-000000000120",
+      "business_model_code": "PRINCIPAL",
+      "business_model_rule_version_id": "90000000-0000-4000-8000-000000000002",
+      "reconciliation_case_id": "90000000-0000-4000-8000-000000000101",
+      "invoice_date": "2026-11-10",
+      "due_date": "2026-11-24",
+      "gross_amount": "28215000.00",
+      "deduction_amount": "0.00",
+      "total_amount": "28215000.00",
+      "status": "ISSUED",
+      "settlement_status": "PAID",
+      "policy_classification": "SIMULATION_ONLY",
+      "issued_at": "2026-11-10T04:15:00Z",
+      "verified_by": "10000000-0000-4000-8000-000000000008",
+      "lines": [
+        {
+          "id": "a0000000-0000-4000-8000-000000000101",
+          "reference_type": "RECONCILIATION_CASE",
+          "reference_id": "90000000-0000-4000-8000-000000000101",
+          "description": "Tagihan Penjualan TBS e-DO EDO-2026-1110-042 (9.900,000 kg @ Rp2.850,00 Simulasi)",
+          "quantity": "9900.000",
+          "unit": "kg",
+          "unit_price": "2850.00",
+          "line_amount": "28215000.00"
+        }
+      ],
+      "approvals": [],
+      "payments": [
+        {
+          "id": "a0000000-0000-4000-8000-000000000301",
+          "payment_number": "PAY-IN-2026-1110-001",
+          "invoice_id": "a0000000-0000-4000-8000-000000000001",
+          "payment_direction": "INBOUND",
+          "payer_party_id": "10000000-0000-4000-8000-000000000120",
+          "payee_party_id": "10000000-0000-4000-8000-000000000100",
+          "amount": "28215000.00",
+          "payment_date": "2026-11-10",
+          "payment_method": "BANK_TRANSFER_MANUAL",
+          "payment_reference": "REF-SIM-INBOUND-001",
+          "proof_file_id": "a0000000-0000-4000-8000-000000000903",
+          "status": "VERIFIED",
+          "recorded_by": "10000000-0000-4000-8000-000000000007",
+          "verified_by": "10000000-0000-4000-8000-000000000008",
+          "verified_at": "2026-11-10T05:10:00Z",
+          "created_at": "2026-11-10T05:00:00Z"
+        }
+      ],
+      "created_at": "2026-11-10T04:05:00Z"
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000002",
+      "invoice_number": "INV-AP-2026-1110-001",
+      "invoice_type": "ACCOUNTS_PAYABLE",
+      "creditor_party_id": "10000000-0000-4000-8000-000000000110",
+      "debtor_party_id": "10000000-0000-4000-8000-000000000100",
+      "business_model_code": "PRINCIPAL",
+      "business_model_rule_version_id": "90000000-0000-4000-8000-000000000002",
+      "reconciliation_case_id": "90000000-0000-4000-8000-000000000101",
+      "invoice_date": "2026-11-10",
+      "due_date": "2026-11-17",
+      "gross_amount": "26730000.00",
+      "deduction_amount": "0.00",
+      "total_amount": "26730000.00",
+      "status": "ISSUED",
+      "settlement_status": "AWAITING_PAYMENT",
+      "policy_classification": "SIMULATION_ONLY",
+      "issued_at": "2026-11-10T04:20:00Z",
+      "verified_by": "10000000-0000-4000-8000-000000000008",
+      "lines": [
+        {
+          "id": "a0000000-0000-4000-8000-000000000102",
+          "reference_type": "RECONCILIATION_CASE",
+          "reference_id": "90000000-0000-4000-8000-000000000101",
+          "description": "Kewajiban Pembelian TBS e-DO EDO-2026-1110-042 ke KUD Sawit Sejahtera (9.900,000 kg Simulasi)",
+          "quantity": "9900.000",
+          "unit": "kg",
+          "unit_price": "2700.00",
+          "line_amount": "26730000.00"
+        }
+      ],
+      "approvals": [
+        {
+          "id": "a0000000-0000-4000-8000-000000000201",
+          "requested_by": "10000000-0000-4000-8000-000000000007",
+          "approver_id": "10000000-0000-4000-8000-000000000011",
+          "decision": "APPROVED",
+          "decision_reason": "Disetujui untuk dibayar sesuai rekonsiliasi MATCHED (Simulasi — belum dibayarkan).",
+          "requested_at": "2026-11-10T04:30:00Z",
+          "decided_at": "2026-11-10T04:45:00Z"
+        }
+      ],
+      "payments": [],
+      "created_at": "2026-11-10T04:10:00Z"
+    },
+    {
+      "id": "a0000000-0000-4000-8000-000000000003",
+      "invoice_number": "INV-DRAFT-2026-1110-003",
+      "invoice_type": "ACCOUNTS_PAYABLE",
+      "creditor_party_id": "10000000-0000-4000-8000-000000000110",
+      "debtor_party_id": "10000000-0000-4000-8000-000000000100",
+      "business_model_code": "UNCONFIRMED",
+      "business_model_rule_version_id": "90000000-0000-4000-8000-000000000002",
+      "reconciliation_case_id": "90000000-0000-4000-8000-000000000101",
+      "invoice_date": "2026-11-10",
+      "due_date": null,
+      "gross_amount": "15000000.00",
+      "deduction_amount": "0.00",
+      "total_amount": "15000000.00",
+      "status": "DRAFT",
+      "settlement_status": "UNPAID",
+      "policy_classification": "PENDING_SOP",
+      "issued_at": null,
+      "verified_by": null,
+      "lines": [],
+      "approvals": [],
+      "payments": [],
+      "created_at": "2026-11-10T05:30:00Z"
+    }
+  ]
+}
