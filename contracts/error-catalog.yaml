@@ -1,0 +1,1429 @@
+# Canonical API Error Catalog — AgroNiaga TBS (Perumda Tuah Sekata)
+# Authority: TRD V1.1 (§15), BSD V1.1 (§29), AFD V1.1 (§33), DBD V1.1
+# Naming Convention (TRD §15.4): MODULE_CATEGORY_DESCRIPTION
+# Public messages are in Indonesian, client-safe, and never leak stack traces or internal DB schema details.
+
+version: "1.0.0"
+contract_baseline: "M0-V1.1"
+error_code_convention: "MODULE_CATEGORY_DESCRIPTION"
+
+envelope_schema:
+  description: "Standard ErrorResponse envelope returned across all non-2xx API responses."
+  required_fields:
+    - success
+    - error
+    - request_id
+  error_object_fields:
+    - code
+    - message
+    - details
+
+errors:
+  # =========================================================================
+  # 1. AUTHENTICATION (401 / 403 / 429)
+  # =========================================================================
+  - code: AUTH_INVALID_CREDENTIALS
+    http_status: 401
+    category: Authentication
+    description: "Kredensial username/password tidak valid atau akun tidak lolos autentikasi."
+    triggering_condition: "Login gagal karena username tidak ditemukan, password salah, atau akun tidak aktif/terkunci."
+    field_details: null
+    client_safe_message: "Username atau kata sandi tidak sesuai."
+    retryable: true
+    required_user_action: "Periksa kembali username serta kata sandi dan coba masuk ulang."
+    security_considerations: "Dilarang membocorkan apakah username terdaftar, alasan spesifik (salah password vs akun nonaktif), atau status lock di respons login (AFD §7.3, TRD §12.3)."
+    related_operations:
+      - loginUser
+    references:
+      - TRD §12.3
+      - TRD §15.4
+      - AFD §7.3
+
+  - code: AUTH_REQUIRED
+    http_status: 401
+    category: Authentication
+    description: "Permintaan ke endpoint internal tidak memiliki cookie sesi yang sah."
+    triggering_condition: "Cookie sesi ts_agroniaga_session tidak ada atau tidak valid pada endpoint terautentikasi."
+    field_details: null
+    client_safe_message: "Silakan masuk terlebih dahulu untuk mengakses layanan ini."
+    retryable: false
+    required_user_action: "Arahkan pengguna ke halaman login (/login)."
+    security_considerations: "Fail-closed apabila session store Redis/DB bermasalah (TRD §11.6)."
+    related_operations:
+      - getCurrentUser
+      - listFarmers
+      - listReceipts
+      - verifyDeliveryOrderQr
+    references:
+      - TRD §12.2
+      - AFD §7.4
+      - AFD §33.2
+
+  - code: AUTH_SESSION_EXPIRED
+    http_status: 401
+    category: Authentication
+    description: "Sesi pengguna telah berakhir atau dicabut oleh administrator/logout."
+    triggering_condition: "Token sesi di server telah melewati expires_at atau memiliki revoked_at terisi."
+    field_details: null
+    client_safe_message: "Sesi Anda telah berakhir. Silakan masuk kembali."
+    retryable: false
+    required_user_action: "Bersihkan cache data privat di browser, login ulang, dan periksa status transaksi sebelum mengirim ulang mutasi."
+    security_considerations: "Cookie sesi wajib segera dibersihkan oleh Set-Cookie max-age=0 saat terdeteksi invalid/revoked."
+    related_operations:
+      - getCurrentUser
+      - createReceiptDraft
+      - issueDeliveryOrder
+    references:
+      - AFD §7.6
+      - DBD §6.7
+
+  - code: AUTH_CSRF_INVALID
+    http_status: 403
+    category: Authentication
+    description: "Token CSRF tidak ada, kedaluwarsa, atau tidak cocok dengan sesi aktif."
+    triggering_condition: "Header X-CSRF-Token pada request mutasi tidak valid terhadap sesi ts_agroniaga_session."
+    field_details: null
+    client_safe_message: "Permintaan tidak dapat diverifikasi secara aman. Muat ulang halaman lalu coba kembali."
+    retryable: true
+    required_user_action: "Ambil ulang token melalui GET /api/v1/auth/csrf sebelum mengirim ulang permintaan."
+    security_considerations: "Mencegah Cross-Site Request Forgery; tidak mengeksekusi mutasi apa pun saat CSRF gagal (TRD §13.3)."
+    related_operations:
+      - logoutUser
+      - createFarmer
+      - issueDeliveryOrder
+      - approveOrRejectInvoicePayment
+    references:
+      - TRD §13.3
+      - IPD §11
+
+  - code: AUTH_TOO_MANY_REQUESTS
+    http_status: 429
+    category: Rate Limiting
+    description: "Terlalu banyak percobaan login gagal dalam jendela waktu terbatas."
+    triggering_condition: "Melebihi batas rate limiter per IP/akun pada endpoint autentikasi."
+    field_details:
+      type: object
+      properties:
+        retry_after_seconds: integer
+    client_safe_message: "Terlalu banyak percobaan masuk. Tunggu beberapa saat sebelum mencoba kembali."
+    retryable: true
+    required_user_action: "Tunggu sesuai header Retry-After sebelum mencoba masuk lagi."
+    security_considerations: "Rate limit state bersifat fail-closed pada operasi login (TRD §11.6)."
+    related_operations:
+      - loginUser
+    references:
+      - TRD §12.3
+      - AFD §7.3
+
+  # =========================================================================
+  # 2. AUTHORIZATION & SEPARATION OF DUTIES (403)
+  # =========================================================================
+  - code: AUTH_ACCESS_DENIED
+    http_status: 403
+    category: Authorization
+    description: "Peran pengguna tidak memiliki permission yang diwajibkan untuk operasi ini."
+    triggering_condition: "Pengguna terautentikasi tidak memiliki permission code terkait pada role_permissions."
+    field_details:
+      type: object
+      nullable: true
+    client_safe_message: "Anda tidak memiliki izin untuk mengakses atau menjalankan tindakan ini."
+    retryable: false
+    required_user_action: "Kembali ke beranda peran atau hubungi administrator jika kewenangan memang dibutuhkan."
+    security_considerations: "Default deny di server; penyembunyian tombol UI bukan mekanisme keamanan (AFD §7.5, TRD §12.4)."
+    related_operations:
+      - publishPrice
+      - verifyInvoice
+      - listUsers
+    references:
+      - TRD §12.4
+      - AFD §7.5
+      - BSD §29.1
+
+  - code: AUTH_SCOPE_FORBIDDEN
+    http_status: 403
+    category: Authorization
+    description: "Pengguna mencoba mengakses atau mengubah resource di luar resource scope miliknya."
+    triggering_condition: "FARMER membuka transaksi petani lain, COOPERATIVE_OPERATOR mengakses koperasi lain, atau MILL_OPERATOR mengakses tiket/e-DO PKS lain."
+    field_details: null
+    client_safe_message: "Anda tidak berwenang mengakses data di luar cakupan organisasi Anda."
+    retryable: false
+    required_user_action: "Pilih data yang termasuk dalam cakupan akun atau PKS Anda."
+    security_considerations: "Untuk pencarian ID spesifik lintas scope yang sensitif, backend dapat mengembalikan 403 konsisten atau 404 tanpa membocorkan rincian atribut entitas pihak lain (DBD §33.6, BSD BIZ-023/024)."
+    bsd_alias: ACCESS_OUT_OF_SCOPE
+    related_operations:
+      - getFarmer
+      - getReceiptDetail
+      - verifyDeliveryOrderQr
+      - createMillTicket
+    references:
+      - DBD §6.6
+      - BSD §6.3
+      - BSD BIZ-023
+      - BSD BIZ-024
+
+  - code: AUTH_OPERATION_FORBIDDEN
+    http_status: 403
+    category: Authorization
+    description: "Operasi terlarang secara kebijakan sistem bagi peran atau status akun tertentu."
+    triggering_condition: "Administrator sistem mencoba menyetujui pembayaran atau keputusan bisnis (BR-SYS-002), atau petani mencoba memodifikasi timbangan (BR-MD-004)."
+    field_details: null
+    client_safe_message: "Peran Anda tidak diperbolehkan melakukan tindakan persetujuan atau perubahan operasional ini."
+    retryable: false
+    required_user_action: "Teruskan permohonan kepada pejabat operasional/keuangan/Direksi yang berwenang."
+    security_considerations: "Menegakkan pemisahan wewenang teknis Administrator dari otorisasi transaksi bisnis (BR-SYS-002, AFD §27.3)."
+    related_operations:
+      - verifyOrRejectPrice
+      - resolveReconciliationDispute
+      - approveOrRejectInvoicePayment
+      - recordReceiptWeighing
+    references:
+      - AFD §27.3
+      - BSD §4.2
+      - D4/D5 BR-SYS-002
+
+  - code: AUTH_CONFLICT_OF_DUTIES
+    http_status: 403
+    category: Authorization
+    description: "Pelanggaran prinsip maker-checker karena aktor pembuat dan pemeriksa/penyetuju adalah orang yang sama."
+    triggering_condition: "Actor ID yang melakukan verify/approve sama dengan actor ID pembuat/pengaju pada harga, dispute, faktur, atau pembayaran."
+    field_details:
+      type: object
+      nullable: true
+    client_safe_message: "Tindakan pemeriksaan atau persetujuan harus dilakukan oleh petugas berwenang yang berbeda dari pembuat data."
+    retryable: false
+    required_user_action: "Minta petugas verifikator atau pejabat berwenang lain untuk meninjau dan menyetujui dokumen."
+    security_considerations: "Wajib diperiksa pada layer Use Case server; kecuali pengecualian resmi SOP yang diaudit (BSD §4.2)."
+    related_operations:
+      - verifyOrRejectPrice
+      - resolveReconciliationDispute
+      - verifyInvoice
+      - approveOrRejectInvoicePayment
+      - verifyPaymentRecord
+    references:
+      - BSD §4.2
+      - AFD §10.5
+
+  # =========================================================================
+  # 3. GENERAL RESOURCE & VALIDATION ERRORS (404 / 422)
+  # =========================================================================
+  - code: SYS_RESOURCE_NOT_FOUND
+    http_status: 404
+    category: Validation
+    description: "Resource dengan identifier atau nomor referensi yang diminta tidak ditemukan atau tidak tersedia untuk konteks publik/scope."
+    triggering_condition: "UUID/ID tidak ada di PostgreSQL atau PKS belum dipublikasikan (is_public=false) pada endpoint publik."
+    field_details: null
+    client_safe_message: "Data yang diminta tidak ditemukan."
+    retryable: false
+    required_user_action: "Periksa kembali nomor referensi atau kembali ke halaman daftar."
+    security_considerations: "Dilarang mengungkap alasan apakah entitas ada namun berstatus privat pada API publik."
+    related_operations:
+      - getPublicPriceDetail
+      - getPublicMillDetail
+      - getReceiptDetail
+      - getDeliveryOrderDetail
+      - getMillTicketDetail
+      - getReconciliationDetail
+    references:
+      - TRD §15.2
+      - BSD §5.1
+
+  - code: VAL_REQUIRED_FIELD
+    http_status: 422
+    category: Validation
+    description: "Satu atau beberapa bidang wajib tidak diisi atau bernilai kosong."
+    triggering_condition: "Validasi schema Pydantic menolak field wajib yang kosong/null, seperti alasan koreksi/penolakan."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Data wajib belum lengkap. Periksa bidang yang ditandai."
+    retryable: true
+    required_user_action: "Lengkapi seluruh kolom bertanda wajib dan kirim kembali formulir."
+    security_considerations: "Jangan memantulkan nilai sensitif (password/token) ke dalam response details."
+    related_operations:
+      - createFarmer
+      - createMill
+      - resolveReconciliationDispute
+      - cancelDeliveryOrder
+    references:
+      - AFD §33.1
+      - BSD BIZ-017
+
+  - code: VAL_INVALID_FORMAT
+    http_status: 422
+    category: Validation
+    description: "Format data tidak sesuai ketentuan (UUID, tanggal ISO, MIME berkas, atau panjang karakter)."
+    triggering_condition: "Parameter path/query atau field payload gagal validasi tipe/format."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Format masukan tidak valid. Periksa kembali isian Anda."
+    retryable: true
+    required_user_action: "Sesuaikan format input sesuai petunjuk kolom."
+    security_considerations: "Validasi ketat mencegah payload oversize dan injection."
+    related_operations:
+      - createFarmer
+      - createMill
+      - uploadEvidenceMetadata
+    references:
+      - TRD §13.2
+      - TRD §13.6
+
+  - code: VAL_INVALID_DECIMAL_PRECISION
+    http_status: 422
+    category: Validation
+    description: "Angka berat, harga, nominal, luas, atau persentase melanggar format string desimal atau batas positif."
+    triggering_condition: "Pengiriman angka negatif pada harga/pembayaran, lebih dari jumlah desimal yang diizinkan, atau format non-desimal (mis. mengirim 'Rp2.850')."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Nilai angka atau presisi desimal tidak valid."
+    retryable: true
+    required_user_action: "Masukkan angka desimal yang benar (maks. 3 angka di belakang koma untuk kg, 2 untuk rupiah)."
+    security_considerations: "Menolak float/simbol mata uang mencegah kegagalan kalkulasi Decimal di server (IPD §4.4, DBD §3.3)."
+    related_operations:
+      - createPriceDraft
+      - recordReceiptWeighing
+      - createMillTicket
+      - recordPaymentEvidence
+    references:
+      - IPD §4.4
+      - DBD §3.3
+
+  - code: VAL_INVALID_COORDINATES
+    http_status: 422
+    category: Validation
+    description: "Koordinat latitude/longitude di luar rentang geografis atau tidak lengkap berpasangan."
+    triggering_condition: "Latitude diisi tanpa Longitude (atau sebaliknya), atau nilai di luar lat [-90..90] / lng [-180..180] (DBD §7.7, FLOW-05/06)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Koordinat lokasi tidak valid. Latitude (-90 s.d. 90) dan Longitude (-180 s.d. 180) wajib diisi berpasangan."
+    retryable: true
+    required_user_action: "Isi kedua koordinat dengan benar atau kosongkan keduanya jika titik belum diverifikasi."
+    security_considerations: "Menjaga integritas titik peta tanpa menghasilkan koordinat fiktif 0,0 (BR-MD-014)."
+    related_operations:
+      - createFarm
+      - updateFarm
+      - createMill
+      - updateMill
+    references:
+      - DBD §7.7
+      - BSD BR-MD-014
+      - FigCraft D5 FLOW-05/FLOW-06
+
+  - code: VAL_INVALID_DATE_RANGE
+    http_status: 422
+    category: Validation
+    description: "Tanggal akhir mendahului tanggal awal pada filter periode, kontrak, atau masa berlaku harga."
+    triggering_condition: "effective_until < effective_from atau end_date < start_date."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Periode tanggal tidak valid. Tanggal akhir tidak boleh mendahului tanggal mulai."
+    retryable: true
+    required_user_action: "Perbaiki rentang tanggal awal dan akhir lalu ulangi."
+    security_considerations: "Standard validation error."
+    bsd_alias: PRICE_PERIOD_INVALID
+    related_operations:
+      - createPriceDraft
+      - createContract
+      - listInternalPrices
+      - getSupplyReport
+    references:
+      - DBD §18.4
+      - BSD §29.1
+
+  # =========================================================================
+  # 4. MASTER DATA CONFLICTS (409)
+  # =========================================================================
+  - code: MD_DUPLICATE_CODE
+    http_status: 409
+    category: Business Conflicts
+    description: "Kode unik entitas master (petani, kebun, koperasi, PKS, plat kendaraan, username) sudah terdaftar."
+    triggering_condition: "Unique constraint violation pada farmer_code, farm_code, mill_code, plate_number, atau username."
+    field_details:
+      type: object
+      properties:
+        field: string
+    client_safe_message: "Kode referensi sudah terdaftar di sistem. Gunakan kode unik yang berbeda."
+    retryable: true
+    required_user_action: "Periksa daftar data aktif/nonaktif atau masukkan kode unik baru."
+    security_considerations: "Terjemahan ramah pengguna; tidak pernah memantulkan IntegrityError SQL mentah (TRD §15.5)."
+    related_operations:
+      - createFarmer
+      - createFarm
+      - createMillCompany
+      - createMill
+      - createVehicle
+      - createUser
+    references:
+      - PRD FR-MD-005
+      - DBD §18.3
+      - FigCraft D5 FLOW-05/FLOW-06
+
+  - code: MD_ENTITY_IN_USE
+    http_status: 409
+    category: Business Conflicts
+    description: "Data master sudah direferensikan oleh transaksi historis sehingga tidak dapat dihapus permanen."
+    triggering_condition: "Permintaan penghapusan fisik pada petani/kebun/PKS yang memiliki riwayat transaksi (BR-MD-003, DBD §18.6)."
+    field_details: null
+    client_safe_message: "Data tidak dapat dihapus karena telah memiliki riwayat transaksi. Gunakan status Nonaktif."
+    retryable: false
+    required_user_action: "Ubah status entitas menjadi INACTIVE untuk menonaktifkan tanpa merusak riwayat."
+    security_considerations: "Menjaga integritas referensial dan keterlacakan histori."
+    related_operations:
+      - updateFarmer
+      - updateMill
+    references:
+      - BSD BR-MD-003
+      - BSD BR-MD-013
+      - DBD §18.6
+
+  - code: MD_STALE_RECORD_VERSION
+    http_status: 409
+    category: Business Conflicts
+    description: "Versi data master sudah diubah petugas lain sebelum penyimpanan."
+    triggering_condition: "Optimistic locking version mismatch saat PATCH data master."
+    field_details:
+      type: object
+      properties:
+        expected_version: integer
+        current_version: integer
+    client_safe_message: "Data telah diperbarui oleh pengguna lain. Muat ulang data terbaru sebelum menyimpan."
+    retryable: false
+    required_user_action: "Muat ulang formulir detail, tinjau perubahan terbaru, lalu simpan kembali."
+    security_considerations: "Mencegah silent lost update antarpetugas (AFD §8.6, DBD §21.4)."
+    related_operations:
+      - updateFarmer
+      - updateFarm
+      - updateMill
+    references:
+      - AFD §8.6
+      - DBD §30.6
+
+  # =========================================================================
+  # 5. PRICING CONFLICTS & VALIDATION (409 / 422)
+  # =========================================================================
+  - code: PRICE_INVALID_AMOUNT
+    http_status: 422
+    category: Validation
+    description: "Nominal harga TBS per kg bernilai nol atau negatif."
+    triggering_condition: "price_per_kg <= 0 (BR-PRC-001)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Harga TBS harus lebih besar dari nol rupiah per kilogram."
+    retryable: true
+    required_user_action: "Masukkan nominal harga positif yang sah."
+    security_considerations: "Menjaga agar data kosong tidak diwakili harga nol palsu (DBD §8.8)."
+    related_operations:
+      - createPriceDraft
+      - updatePriceDraft
+      - createDisbunReferencePrice
+    references:
+      - BSD BR-PRC-001
+      - DBD §8.8
+
+  - code: PRICE_INVALID_PERIOD
+    http_status: 422
+    category: Validation
+    description: "Periode berlaku atau tanggal efektif harga tidak sah."
+    triggering_condition: "effective_until <= effective_from atau periode tidak valid untuk publikasi (BSD §29.1)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Periode berlaku harga tidak sah. Periksa tanggal mulai dan tanggal berakhir."
+    retryable: true
+    required_user_action: "Perbaiki periode berlaku harga sesuai sumber resmi."
+    security_considerations: "Standard domain validation."
+    bsd_alias: PRICE_PERIOD_INVALID
+    related_operations:
+      - createPriceDraft
+      - updatePriceDraft
+      - publishPrice
+    references:
+      - BSD BR-PRC-004
+      - BSD §29.1
+      - TRD §15.4
+
+  - code: PRICE_NOT_VERIFIED
+    http_status: 409
+    category: Business Conflicts
+    description: "Harga belum berstatus VERIFIED sehingga dilarang dipublikasikan ke Portal Publik."
+    triggering_condition: "Memanggil POST /prices/{id}/publish pada harga DRAFT, PENDING_VERIFICATION, atau REJECTED."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+    client_safe_message: "Harga belum diverifikasi sehingga belum dapat dipublikasikan."
+    retryable: false
+    required_user_action: "Ajukan dan selesaikan verifikasi harga terlebih dahulu oleh verifikator yang berbeda."
+    security_considerations: "Menegakkan BR-PRC-006 dan mencegah publikasi harga mentah."
+    bsd_alias: PRICE_NOT_VERIFIED
+    related_operations:
+      - publishPrice
+    references:
+      - BSD BR-PRC-006
+      - BSD BIZ-001
+      - IPD §4.3
+
+  - code: PRICE_ALREADY_PUBLISHED
+    http_status: 409
+    category: Business Conflicts
+    description: "Harga sudah berstatus PUBLISHED atau sedang berlaku aktif untuk kategori/PKS yang sama."
+    triggering_condition: "Permintaan publish ulang atau edit draft atas harga yang telah dipublikasikan."
+    field_details: null
+    client_safe_message: "Harga ini sudah dipublikasikan dan tidak dapat diubah langsung."
+    retryable: false
+    required_user_action: "Buat usulan harga baru untuk periode berikutnya atau cabut publikasi aktif bila perlu koreksi."
+    security_considerations: "Menjaga riwayat harga historis tidak tertimpa (BR-PRC-010/012)."
+    related_operations:
+      - updatePriceDraft
+      - publishPrice
+    references:
+      - TRD §15.4
+      - DBD §8.5
+
+  - code: PRICE_OVERLAPPING_PERIOD
+    http_status: 409
+    category: Business Conflicts
+    description: "Terjadi tumpang tindih periode harga aktif pada PKS dan kategori harga yang sama."
+    triggering_condition: "Dua kutipan harga PUBLISHED bertabrakan rentang effective_from..effective_until untuk (mill_id, price_category_id)."
+    field_details:
+      type: object
+      properties:
+        conflicting_price_quote_id: string
+    client_safe_message: "Periode berlaku harga bertumpang tindih dengan harga aktif yang sudah dipublikasikan pada kategori PKS ini."
+    retryable: false
+    required_user_action: "Sesuaikan periode berlaku atau cabut (revoke) publikasi harga sebelumnya sesuai SOP."
+    security_considerations: "Menghindari ambiguitas harga ganda pada Portal Publik (AFD §10.8, DBD §8.5)."
+    related_operations:
+      - publishPrice
+    references:
+      - AFD §10.8
+      - DBD §8.5
+
+  - code: PRICE_INVALID_STATE_TRANSITION
+    http_status: 409
+    category: Business Conflicts
+    description: "Perubahan status harga melompati alur state machine SM-01."
+    triggering_condition: "Aksi submit/verify/publish/revoke dipanggil dari status awal yang tidak diizinkan."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+        requested_action: string
+    client_safe_message: "Status harga saat ini tidak mengizinkan tindakan tersebut."
+    retryable: false
+    required_user_action: "Muat ulang detail harga untuk melihat status terkini dan langkah berikutnya yang tersedia."
+    security_considerations: "State validation dilakukan di Use Case/Domain."
+    related_operations:
+      - submitPriceForVerification
+      - verifyOrRejectPrice
+      - publishPrice
+      - revokePrice
+    references:
+      - AFD §29
+      - BSD §26.2
+
+  # =========================================================================
+  # 6. TBS RECEIVING & GRADING (409 / 422)
+  # =========================================================================
+  - code: TBS_INVALID_WEIGHT
+    http_status: 422
+    category: Validation
+    description: "Berat bruto atau tara bernilai negatif, nol tidak wajar, melebihi kapasitas, atau tara melebihi bruto."
+    triggering_condition: "gross_weight_kg < 0, tare_weight_kg < 0, atau tare_weight_kg > gross_weight_kg (BR-008/009, BIZ-004)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Nilai timbangan tidak valid: berat tara tidak boleh melebihi berat bruto dan tidak boleh bernilai negatif."
+    retryable: true
+    required_user_action: "Periksa ulang hasil timbangan jembatan/ramp dan masukkan angka bruto serta tara yang benar."
+    security_considerations: "Validasi juga ditegakkan sebagai PostgreSQL CHECK constraint (DBD §19.1)."
+    bsd_alias: INVALID_WEIGHT
+    related_operations:
+      - recordReceiptWeighing
+      - createMillTicket
+      - reviseMillTicket
+    references:
+      - TRD §15.4
+      - BSD BIZ-004
+      - DBD §19.1
+
+  - code: TBS_INVALID_GRADING_DEDUCTION
+    http_status: 422
+    category: Validation
+    description: "Parameter potongan grading tidak valid atau berpotensi menyebabkan pemotongan ganda."
+    triggering_condition: "Nilai potongan negatif, persentase > 100%, dasar perhitungan tidak konsisten, atau duplikasi komponen grading yang sama (BR-GRD-003, BIZ-006)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Rincian potongan mutu tidak valid atau terdeteksi ganda pada komponen yang sama."
+    retryable: true
+    required_user_action: "Periksa kategori mutu dan pisahkan potongan berat vs potongan nilai."
+    security_considerations: "Mencegah manipulasi potongan ganda atas netto timbangan (BSD §10.3)."
+    related_operations:
+      - recordReceiptGrading
+      - createMillTicket
+    references:
+      - BSD BR-GRD-003
+      - BSD BIZ-006
+
+  - code: TBS_DUPLICATE_RECEIPT
+    http_status: 409
+    category: Business Conflicts
+    description: "Nomor penerimaan TBS sudah tercatat dalam sistem."
+    triggering_condition: "Unique violation pada receipt_number atau pengulangan pembuatan non-idempoten."
+    field_details: null
+    client_safe_message: "Transaksi penerimaan TBS dengan nomor tersebut sudah tercatat."
+    retryable: false
+    required_user_action: "Periksa daftar penerimaan sebelum membuat catatan baru."
+    security_considerations: "Didukung Idempotency-Key untuk mencegah duplikasi retry jaringan (BR-RCV-004)."
+    related_operations:
+      - createReceiptDraft
+    references:
+      - BSD BR-RCV-001
+      - BSD BR-RCV-004
+
+  - code: TBS_RECEIPT_LOCKED
+    http_status: 409
+    category: Business Conflicts
+    description: "Penerimaan TBS sudah dialokasikan ke e-DO aktif atau telah dikirim sehingga tidak dapat diubah/dibatalkan bebas."
+    triggering_condition: "Percobaan edit berat langsung atau pembatalan penerimaan berstatus ALLOCATED, SHIPPED, atau CLOSED (BSD §8.4)."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+        delivery_order_id: string
+    client_safe_message: "Transaksi penerimaan sudah masuk pengiriman aktif sehingga terkunci. Gunakan prosedur koreksi resmi."
+    retryable: false
+    required_user_action: "Periksa nomor e-DO terkait atau ajukan koreksi/pembatalan pengiriman yang sah terlebih dahulu."
+    security_considerations: "Melindungi snapshot bobot asal pada e-DO agar tetap konsisten (DBD §11.3)."
+    related_operations:
+      - recordReceiptWeighing
+      - recordReceiptGrading
+      - cancelReceipt
+    references:
+      - BSD §8.4
+      - DBD §11.3
+
+  - code: TBS_INVALID_STATE_TRANSITION
+    http_status: 409
+    category: Business Conflicts
+    description: "Perubahan status penerimaan melanggar alur SM-02 (mis. validasi sebelum timbang lengkap)."
+    triggering_condition: "Pemanggilan validate/cancel tidak sesuai syarat status penerimaan."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+    client_safe_message: "Penerimaan TBS belum memenuhi syarat untuk perpindahan status ini."
+    retryable: false
+    required_user_action: "Pastikan data petani, kebun, dan penimbangan saat ini sudah lengkap."
+    security_considerations: "Status diverifikasi server (AFD §28)."
+    related_operations:
+      - validateReceipt
+      - cancelReceipt
+    references:
+      - AFD §28
+      - BSD BR-RCV-005
+
+  - code: TBS_STALE_RECORD_VERSION
+    http_status: 409
+    category: Business Conflicts
+    description: "Versi catatan penerimaan sudah berubah akibat operasi petugas lain."
+    triggering_condition: "version dalam request tidak cocok dengan tbs_receipts.version terkini."
+    field_details:
+      type: object
+      properties:
+        current_version: integer
+    client_safe_message: "Catatan penerimaan ini baru saja diperbarui oleh proses lain. Muat ulang data terbaru."
+    retryable: false
+    required_user_action: "Muat ulang detail penerimaan sebelum melanjutkan."
+    security_considerations: "Optimistic locking (DBD §9.1)."
+    related_operations:
+      - recordReceiptWeighing
+      - validateReceipt
+    references:
+      - DBD §9.1
+      - DBD §21.4
+
+  # =========================================================================
+  # 7. CONTRACTS & QUOTA (409)
+  # =========================================================================
+  - code: CONTRACT_NOT_ACTIVE
+    http_status: 409
+    category: Business Conflicts
+    description: "Kontrak niaga berstatus DRAFT, PENDING_APPROVAL, SUSPENDED, atau CANCELLED sehingga tidak dapat dipakai pengiriman."
+    triggering_condition: "Reservasi kuota atau penerbitan e-DO merujuk kontrak non-ACTIVE (BR-CON-003)."
+    field_details:
+      type: object
+      properties:
+        contract_status: string
+    client_safe_message: "Kontrak belum aktif atau sedang ditangguhkan sehingga belum dapat digunakan untuk pengiriman."
+    retryable: false
+    required_user_action: "Pilih kontrak aktif yang sesuai atau mintakan persetujuan kontrak."
+    security_considerations: "Validasi server pada transaksi e-DO/kuota."
+    related_operations:
+      - approveContract
+      - reserveContractQuota
+      - issueDeliveryOrder
+    references:
+      - BSD BR-CON-003
+
+  - code: CONTRACT_EXPIRED
+    http_status: 409
+    category: Business Conflicts
+    description: "Masa berlaku kontrak atau periode kuota telah berakhir pada tanggal transaksi."
+    triggering_condition: "Tanggal penerbitan e-DO berada di luar rentang start_date..end_date kontrak/periode kuota (BR-CON-004, BIZ-007)."
+    field_details:
+      type: object
+      properties:
+        contract_end_date: string
+    client_safe_message: "Masa berlaku kontrak atau periode kuota telah berakhir."
+    retryable: false
+    required_user_action: "Gunakan kontrak/periode kuota yang masih aktif untuk PKS tujuan."
+    security_considerations: "Mencegah penggunaan kontrak kedaluwarsa secara diam-diam."
+    bsd_alias: CONTRACT_EXPIRED
+    related_operations:
+      - reserveContractQuota
+      - issueDeliveryOrder
+    references:
+      - BSD BR-CON-004
+      - BSD BIZ-007
+
+  - code: CONTRACT_QUOTA_EXCEEDED
+    http_status: 409
+    category: Business Conflicts
+    description: "Sisa kuota kontrak yang tersedia tidak mencukupi untuk berat muatan yang akan dikirim."
+    triggering_condition: "requested_weight_kg > (quota_limit_kg - consumed_weight_kg - reserved_weight_kg) di PostgreSQL (BR-QTA-002, BIZ-008)."
+    field_details:
+      type: object
+      properties:
+        available_quota_kg: string
+        requested_weight_kg: string
+    client_safe_message: "Pengiriman belum dapat diterbitkan karena sisa kuota kontrak tidak mencukupi."
+    retryable: false
+    required_user_action: "Kurangi jumlah muatan atau pilih kontrak/periode kuota PKS lain yang masih mencukupi."
+    security_considerations: "Dihitung langsung dari PostgreSQL dengan row-level lock, tidak pernah mengandalkan nilai cache Redis (ADR-004, BIZ-009)."
+    bsd_alias: QUOTA_EXCEEDED
+    related_operations:
+      - reserveContractQuota
+      - issueDeliveryOrder
+    references:
+      - TRD §15.4
+      - BSD §12.3
+      - BSD §29.2
+      - BSD BIZ-008
+
+  - code: CONTRACT_CONCURRENT_CONFLICT
+    http_status: 409
+    category: Business Conflicts
+    description: "Terjadi persaingan transaksi paralel atas sisa kuota atau persetujuan kontrak yang sama."
+    triggering_condition: "Kegagalan lock acquisition / serialization conflict saat dua petugas menerbitkan reservasi serentak (BIZ-009)."
+    field_details: null
+    client_safe_message: "Kuota kontrak sedang diproses transaksi lain secara bersamaan. Muat ulang sisa kuota dan coba kembali."
+    retryable: true
+    required_user_action: "Periksa kembali sisa kuota terkini pada kontrak lalu kirim ulang jika masih mencukupi."
+    security_considerations: "Menjamin tidak terjadi over-quota akibat race condition."
+    related_operations:
+      - reserveContractQuota
+      - issueDeliveryOrder
+    references:
+      - BSD §12.6
+      - BSD BIZ-009
+
+  - code: CONTRACT_BUSINESS_MODEL_UNCONFIRMED
+    http_status: 422
+    category: Validation
+    description: "Kombinasi pihak kontrak bertentangan dengan klasifikasi model bisnis (PRINCIPAL vs AGENT) atau masih UNCONFIRMED saat operasi mensyaratkannya."
+    triggering_condition: "Mode AGENT tidak menyertakan agent_party_id & represented_party_id, atau mode PRINCIPAL memakai represented_party_id (DBD §10.1)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Struktur pihak pada kontrak tidak sesuai dengan klasifikasi model usaha yang dipilih."
+    retryable: true
+    required_user_action: "Lengkapi relasi pihak principal/agent sesuai model transaksi atau tandai UNCONFIRMED untuk rancangan simulasi."
+    security_considerations: "Mencegah rancangan kontrak cacat relasi."
+    related_operations:
+      - createContract
+      - approveContract
+    references:
+      - DBD §10.1
+      - BSD §2.3
+
+  # =========================================================================
+  # 8. LOGISTICS, e-DO & IDEMPOTENCY (403 / 404 / 409)
+  # =========================================================================
+  - code: LOG_DELIVERY_ALREADY_ASSIGNED
+    http_status: 409
+    category: Business Conflicts
+    description: "Satu atau lebih penerimaan TBS sudah memiliki alokasi ACTIVE pada pengiriman e-DO lain."
+    triggering_condition: "Pelanggaran partial unique index ux_active_receipt_allocation (BR-DO-003, BIZ-010, BIZ-030)."
+    field_details:
+      type: object
+      properties:
+        conflicting_receipt_ids:
+          type: array
+          items: string
+    client_safe_message: "Sebagian muatan penerimaan sudah dialokasikan ke e-DO aktif lain dan tidak dapat dikirim ganda."
+    retryable: false
+    required_user_action: "Hapus penerimaan yang sudah teralokasi dari daftar muatan dan pilih penerimaan siap kirim lainnya."
+    security_considerations: "Anti double-allocation ditegakkan di DB + transaksi SQL atomik (DBD §19.2)."
+    bsd_alias: RECEIPT_ALREADY_ALLOCATED
+    related_operations:
+      - createDeliveryOrderDraft
+      - issueDeliveryOrder
+    references:
+      - TRD §15.4
+      - BSD BR-DO-003
+      - DBD §19.2
+
+  - code: LOG_INVALID_STATE_TRANSITION
+    http_status: 409
+    category: Business Conflicts
+    description: "Perubahan status pengiriman melompati urutan atau melanggar transisi resmi SM-05."
+    triggering_condition: "Mis. CANCELLED ke COMPLETED, DRAFT langsung ke RECEIVED, atau READY dari muatan belum valid (BR-SHP-002, BSD §26.2)."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+        requested_status: string
+    client_safe_message: "Status pengiriman saat ini tidak dapat diubah ke status tujuan tersebut."
+    retryable: false
+    required_user_action: "Ikuti urutan tahap pengiriman yang sah sesuai status terkini dokumen."
+    security_considerations: "State machine divalidasi di backend."
+    bsd_alias: DELIVERY_INVALID_STATE
+    related_operations:
+      - issueDeliveryOrder
+      - transitionDeliveryOrderStatus
+    references:
+      - BSD BR-SHP-002
+      - AFD §16.5
+
+  - code: LOG_CANCELLATION_FORBIDDEN
+    http_status: 409
+    category: Business Conflicts
+    description: "Pengiriman tidak dapat dibatalkan melalui pembatalan biasa karena truk telah diterima PKS atau selesai."
+    triggering_condition: "Permintaan cancel pada e-DO berstatus ARRIVED, RECEIVED, atau COMPLETED (AFD §16.5, BSD §14.5)."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+    client_safe_message: "Pengiriman yang sudah tiba atau diterima di PKS tidak dapat dibatalkan langsung."
+    retryable: false
+    required_user_action: "Gunakan alur penanganan pengecualian/dispute resmi bersama operasional Perumda."
+    security_considerations: "Mencegah penghapusan atau pembatalan bukti kejadian fisik di PKS (BSD §14.5)."
+    related_operations:
+      - cancelDeliveryOrder
+    references:
+      - AFD §16.5
+      - BSD §14.5
+
+  - code: LOG_QR_VERIFICATION_FAILED
+    http_status: 404
+    category: Business Conflicts
+    description: "Referensi QR / nomor e-DO tidak valid, tidak ditemukan, atau sudah tidak berlaku untuk verifikasi kedatangan."
+    triggering_condition: "Token QR e-DO tidak dikenal atau pengiriman masih DRAFT / sudah CANCELLED saat verifikasi kedatangan."
+    field_details: null
+    client_safe_message: "Referensi e-DO atau kode QR tidak ditemukan atau sudah dibatalkan."
+    retryable: false
+    required_user_action: "Periksa ulang nomor dokumen e-DO bersama petugas koperasi pengirim atau operasional Perumda."
+    security_considerations: "QR verifikasi wajib terautentikasi (AFD §15.6); dilarang memaparkan muatan petani ke visitor anonim."
+    related_operations:
+      - verifyDeliveryOrderQr
+    references:
+      - AFD §15.6
+      - AFD §17.3
+
+  - code: LOG_STALE_RECORD_VERSION
+    http_status: 409
+    category: Business Conflicts
+    description: "Versi e-DO sudah berubah oleh aksi lain sebelum permintaan disimpan."
+    triggering_condition: "Mismatch delivery_orders.version pada issue/status/cancel."
+    field_details:
+      type: object
+      properties:
+        current_version: integer
+    client_safe_message: "Status e-DO telah diperbarui pengguna lain. Muat ulang data terbaru."
+    retryable: false
+    required_user_action: "Muat ulang detail e-DO lalu periksa status terbarunya."
+    security_considerations: "Optimistic lock (DBD §11.1)."
+    related_operations:
+      - issueDeliveryOrder
+      - transitionDeliveryOrderStatus
+      - cancelDeliveryOrder
+    references:
+      - DBD §11.1
+      - DBD §21.4
+
+  - code: IDM_KEY_CONFLICT_PAYLOAD_MISMATCH
+    http_status: 409
+    category: Business Conflicts
+    description: "Header Idempotency-Key yang sama dipakai kembali dengan isi payload permintaan yang berbeda."
+    triggering_condition: "Request hash berbeda untuk kunci (actor_id, operation_key, idempotency_key) yang sudah tercatat (BR-IDM-003)."
+    field_details: null
+    client_safe_message: "Kunci idempotensi permintaan sudah digunakan untuk data transaksi yang berbeda. Muat ulang formulir."
+    retryable: false
+    required_user_action: "Jangan kirim ulang payload berbeda memakai kunci lama; mulai permintaan baru bila ingin membuat transaksi berbeda."
+    security_considerations: "Mencegah mutasi tak terduga akibat replay kunci (BSD BR-IDM-003, DBD §16.3)."
+    related_operations:
+      - createReceiptDraft
+      - reserveContractQuota
+      - issueDeliveryOrder
+      - createMillTicket
+      - calculateReconciliation
+      - approveOrRejectInvoicePayment
+      - recordPaymentEvidence
+    references:
+      - BSD BR-IDM-003
+      - DBD §16.3
+
+  - code: IDM_REQUEST_IN_PROGRESS
+    http_status: 409
+    category: Business Conflicts
+    description: "Permintaan dengan Idempotency-Key yang sama masih sedang diproses server."
+    triggering_condition: "Duplicate retry diterima sebelum permintaan pertama selesai commit."
+    field_details: null
+    client_safe_message: "Permintaan sebelumnya masih diproses. Tunggu sebentar dan periksa status transaksi terkini."
+    retryable: true
+    required_user_action: "Tunggu beberapa detik lalu muat ulang daftar transaksi untuk memastikan hasil."
+    security_considerations: "Mencegah race condition saat user menekan tombol berulang kali."
+    related_operations:
+      - issueDeliveryOrder
+      - createMillTicket
+      - recordPaymentEvidence
+    references:
+      - BSD BR-IDM-001
+      - DBD §16.3
+
+  # =========================================================================
+  # 9. MILL WEIGHING (403 / 409)
+  # =========================================================================
+  - code: MILL_EDO_MILL_MISMATCH
+    http_status: 403
+    category: Authorization
+    description: "Petugas PKS mencoba memverifikasi e-DO atau mencatat tiket timbang untuk pengiriman yang ditujukan ke PKS lain."
+    triggering_condition: "delivery_orders.mill_id != scope mill_id petugas PKS (AFD §17.3, BR-MILL-002)."
+    field_details: null
+    client_safe_message: "Dokumen e-DO ini tidak ditujukan untuk PKS Anda."
+    retryable: false
+    required_user_action: "Laporkan ketidaksesuaian tujuan e-DO kepada staf operasional Perumda."
+    security_considerations: "Menegakkan isolasi lintas-PKS secara ketat (BIZ-024)."
+    related_operations:
+      - verifyDeliveryOrderQr
+      - createMillTicket
+    references:
+      - AFD §17.3
+      - BSD BR-MILL-002
+      - BSD BIZ-024
+
+  - code: MILL_DUPLICATE_TICKET
+    http_status: 409
+    category: Business Conflicts
+    description: "Nomor tiket timbang PKS sudah terdaftar dalam cakupan PKS atau e-DO sudah memiliki tiket current."
+    triggering_condition: "Duplikasi ticket_number dalam mill_id yang sama atau pelanggaran ux_current_mill_ticket saat baseline 1 tiket per e-DO (BR-MILL-003, AFD §18.3)."
+    field_details:
+      type: object
+      properties:
+        ticket_number: string
+    client_safe_message: "Nomor tiket timbang sudah terdaftar. Periksa kembali nomor tiket sebelum menyimpan."
+    retryable: false
+    required_user_action: "Verifikasi nomor tiket pada bukti fisik atau gunakan alur revisi tiket bila membetulkan tiket yang ada."
+    security_considerations: "Pesan ramah tanpa IntegrityError mentah (TRD §15.5)."
+    bsd_alias: MILL_TICKET_DUPLICATE
+    related_operations:
+      - createMillTicket
+    references:
+      - TRD §15.4
+      - TRD §15.5
+      - BSD BR-MILL-003
+
+  - code: MILL_EDO_NOT_ELIGIBLE
+    http_status: 409
+    category: Business Conflicts
+    description: "e-DO belum berstatus ARRIVED atau dibatalkan sehingga belum memenuhi syarat pencatatan tiket PKS."
+    triggering_condition: "POST /mill-tickets atas e-DO berstatus DRAFT, READY, atau CANCELLED."
+    field_details:
+      type: object
+      properties:
+        delivery_status: string
+    client_safe_message: "e-DO belum berstatus tiba di PKS atau telah dibatalkan sehingga tiket timbang belum dapat dicatat."
+    retryable: false
+    required_user_action: "Lakukan verifikasi kedatangan e-DO terlebih dahulu."
+    security_considerations: "Memastikan urutan proses kedatangan sebelum tiket."
+    related_operations:
+      - createMillTicket
+    references:
+      - AFD §18.2
+      - BSD BR-MILL-001
+
+  - code: MILL_TICKET_ALREADY_FINAL
+    http_status: 409
+    category: Business Conflicts
+    description: "Tiket timbang sudah terkunci karena faktur transaksi terkait telah diterbitkan/diselesaikan."
+    triggering_condition: "Revisi langsung atas tiket setelah faktur ISSUED/PAID (BIZ-026)."
+    field_details: null
+    client_safe_message: "Tiket timbang tidak dapat direvisi langsung karena transaksi keuangan terkait sudah diterbitkan."
+    retryable: false
+    required_user_action: "Ajukan pemeriksaan dampak dan koreksi resmi melalui Perumda."
+    security_considerations: "Melindungi histori keuangan dari perubahan retroaktif diam-diam (BIZ-026, BR-REC-010)."
+    related_operations:
+      - reviseMillTicket
+      - verifyMillTicket
+    references:
+      - BSD BIZ-026
+      - FigCraft D5 1560
+
+  # =========================================================================
+  # 10. RECONCILIATION & DISPUTE (409 / 422)
+  # =========================================================================
+  - code: REC_NOT_READY
+    http_status: 409
+    category: Business Conflicts
+    description: "Data e-DO atau tiket timbang PKS terverifikasi belum tersedia untuk menjalankan rekonsiliasi."
+    triggering_condition: "Tiket PKS belum ada atau masih DRAFT/SUBMITTED (belum VERIFIED, BIZ-012)."
+    field_details: null
+    client_safe_message: "Rekonsiliasi belum dapat dijalankan karena tiket timbang PKS belum tersedia atau belum terverifikasi."
+    retryable: false
+    required_user_action: "Selesaikan verifikasi tiket timbang PKS terlebih dahulu."
+    security_considerations: "Mencegah rekonsiliasi final memakai angka mentah."
+    bsd_alias: RECONCILIATION_NOT_READY
+    related_operations:
+      - createOrTriggerReconciliation
+      - calculateReconciliation
+    references:
+      - BSD §17.2
+      - BSD BIZ-012
+
+  - code: REC_INVALID_WEIGHT_BASIS
+    http_status: 422
+    category: Validation
+    description: "Berat asal bernilai nol atau dasar definisi berat koperasi vs PKS tidak setara."
+    triggering_condition: "origin_weight_kg <= 0 atau perbandingan mencampur berat netto timbang vs berat pasca-grading secara tidak setara (AFD §19.5, FR-REC-002)."
+    field_details: null
+    client_safe_message: "Dasar berat asal dan berat PKS tidak setara atau bernilai nol sehingga rekonsiliasi normal ditahan."
+    retryable: false
+    required_user_action: "Periksa satuan dan tahap berat (pra-grading vs pasca-grading) kedua dokumen."
+    security_considerations: "Menghindari division-by-zero dan perbandingan menyesatkan."
+    related_operations:
+      - createOrTriggerReconciliation
+      - calculateReconciliation
+    references:
+      - PRD FR-REC-002
+      - BSD §17.3
+      - AFD §19.5
+
+  - code: REC_WEIGHT_DISPUTE
+    http_status: 409
+    category: Business Conflicts
+    description: "Selisih berat melampaui ambang toleransi yang berlaku sehingga transaksi ditahan sebagai DISPUTE_HOLD."
+    triggering_condition: "Persentase selisih melampaui tolerance_percent (mis. >1,5% pada mode SIMULATION_ONLY), atau upaya memfinalisasi sebelum sengketa selesai (TRD §15.3)."
+    field_details:
+      type: object
+      properties:
+        reconciliation_status: string
+        difference_weight_kg: string
+        difference_percent: string
+        tolerance_percent: string
+        policy_classification: string
+    client_safe_message: "Selisih berat melebihi toleransi yang berlaku. Transaksi ditahan untuk pemeriksaan sengketa."
+    retryable: false
+    required_user_action: "Buka detail kasus rekonsiliasi, periksa dokumen bukti, dan jalankan alur pemeriksaan sengketa."
+    security_considerations: "Tidak menyimpulkan kesalahan pihak secara otomatis berdasarkan persentase semata (BR-DSP-006)."
+    bsd_alias: RECONCILIATION_DISPUTE
+    related_operations:
+      - calculateReconciliation
+      - createInvoiceDraft
+    references:
+      - TRD §15.3
+      - BSD BR-DSP-006
+      - BSD BIZ-014
+
+  - code: REC_NEGATIVE_DIFFERENCE_HOLD
+    http_status: 409
+    category: Business Conflicts
+    description: "Berat diterima PKS lebih besar daripada berat asal (selisih negatif) dan wajib diperiksa eksplisit."
+    triggering_condition: "mill_weight_kg > origin_weight_kg -> difference_weight_kg < 0 (BR-REC-009, BIZ-015)."
+    field_details:
+      type: object
+      properties:
+        difference_weight_kg: string
+        reconciliation_status: string
+    client_safe_message: "Terdeteksi selisih negatif (berat PKS lebih besar dari berat asal). Transaksi ditahan untuk pemeriksaan anomali."
+    retryable: false
+    required_user_action: "Periksa ulang dokumen asal dan tiket PKS melalui pemeriksaan manusia."
+    security_considerations: "Selisih negatif tidak boleh otomatis dinyatakan MATCHED sebagai susut wajar (PRD §14.3 #9)."
+    related_operations:
+      - calculateReconciliation
+    references:
+      - BSD BR-REC-009
+      - BSD BIZ-015
+      - D4/D5 Anomali Surplus
+
+  - code: REC_DISPUTE_REASON_REQUIRED
+    http_status: 422
+    category: Validation
+    description: "Pengajuan klarifikasi atau penyelesaian sengketa dikirim tanpa alasan tertulis."
+    triggering_condition: "reason kosong/terlalu pendek pada POST /reconciliations/{id}/review atau /resolve (BR-DSP-002, BIZ-017)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Alasan pemeriksaan dan keputusan penyelesaian sengketa wajib diisi."
+    retryable: true
+    required_user_action: "Lengkapi alasan klarifikasi dan referensi bukti pendukung sebelum mengirim."
+    security_considerations: "Wajib terekam di dispute_reviews & audit_events."
+    related_operations:
+      - submitDisputeReview
+      - resolveReconciliationDispute
+    references:
+      - BSD BR-DSP-002
+      - BSD BIZ-017
+
+  - code: REC_INVALID_STATE_TRANSITION
+    http_status: 409
+    category: Business Conflicts
+    description: "Transisi status rekonsiliasi atau dispute melanggar aturan SM-07/SM-08."
+    triggering_condition: "Mencoba resolve dari status MATCHED/WAITING_TICKET atau menghitung ulang kasus RESOLVED/CANCELLED."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+    client_safe_message: "Status rekonsiliasi saat ini tidak mengizinkan tindakan tersebut."
+    retryable: false
+    required_user_action: "Periksa status terbaru kasus rekonsiliasi."
+    security_considerations: "Status rekonsiliasi final dilindungi riwayat versi."
+    related_operations:
+      - calculateReconciliation
+      - submitDisputeReview
+      - resolveReconciliationDispute
+    references:
+      - AFD §30
+      - BSD §17.8
+
+  - code: REC_ALLOCATION_IMBALANCE
+    http_status: 422
+    category: Validation
+    description: "Total berat atau nilai alokasi multi-petani tidak seimbang dengan dasar penyelesaian e-DO."
+    triggering_condition: "Sum(farmer_settlement_allocations) != target total after rounding rule (BR-ALC-002/003, BIZ-019)."
+    field_details:
+      type: object
+      properties:
+        expected_total: string
+        allocated_total: string
+    client_safe_message: "Jumlah pembagian alokasi petani tidak seimbang dengan total nilai transaksi yang disahkan."
+    retryable: false
+    required_user_action: "Periksa bobot asal dan aturan pembulatan yang dipilih."
+    security_considerations: "Mencegah kebocoran atau selisih tak terlacak."
+    related_operations:
+      - simulateOrComputeFarmerAllocations
+    references:
+      - BSD BR-ALC-002
+      - BSD BR-ALC-003
+      - BSD BIZ-019
+
+  - code: REC_ALLOCATION_POLICY_UNCONFIRMED
+    http_status: 409
+    category: Business Conflicts
+    description: "Mode alokasi final ke petani ditolak karena kebijakan pembagian hasil multi-petani belum disahkan SOP Perumda."
+    triggering_condition: "Permintaan finalisasi alokasi nyata ketika allocation_policy_version_id belum berstatus APPROVED (BSD-DEC-013)."
+    field_details:
+      type: object
+      properties:
+        pending_decision_id: string
+    client_safe_message: "Pembagian hasil final belum dapat disahkan sebelum SOP metode alokasi multi-petani ditetapkan secara resmi."
+    retryable: false
+    required_user_action: "Gunakan mode simulasi berlabel atau tunggu pengesahan SOP alokasi hasil."
+    security_considerations: "Menegakkan larangan konversi aturan simulasi menjadi keputusan finansial nyata (BSD §20.7)."
+    related_operations:
+      - simulateOrComputeFarmerAllocations
+    references:
+      - BSD §20.7
+      - AFD §41 #4
+
+  # =========================================================================
+  # 11. FINANCE, INVOICES & PAYMENTS (409 / 422)
+  # =========================================================================
+  - code: FIN_INVOICE_NOT_VERIFIED
+    http_status: 409
+    category: Business Conflicts
+    description: "Faktur belum berstatus VERIFIED/ISSUED sehingga tidak dapat diterbitkan atau dibayarkan."
+    triggering_condition: "Penerbitan faktur DRAFT, atau persetujuan pembayaran atas faktur non-ISSUED (BR-INV-001)."
+    field_details:
+      type: object
+      properties:
+        invoice_status: string
+    client_safe_message: "Faktur belum terverifikasi atau diterbitkan sehingga proses lanjutan belum dapat dijalankan."
+    retryable: false
+    required_user_action: "Selesaikan verifikasi dan penerbitan faktur terlebih dahulu."
+    security_considerations: "Memastikan keabsahan dokumen tagihan."
+    bsd_alias: INVOICE_NOT_VERIFIED
+    related_operations:
+      - issueInvoice
+      - approveOrRejectInvoicePayment
+      - recordPaymentEvidence
+    references:
+      - BSD BR-INV-001
+      - BSD §29.1
+
+  - code: FIN_DISPUTE_HOLD_BLOCKED
+    http_status: 409
+    category: Business Conflicts
+    description: "Transaksi masih berada dalam status DISPUTE_HOLD atau UNDER_REVIEW sehingga diblokir dari faktur/pembayaran final."
+    triggering_condition: "reconciliation_cases.status NOT IN ('MATCHED', 'RESOLVED') saat pembuatan faktur/pembayaran (BR-PAY-005, BIZ-016)."
+    field_details:
+      type: object
+      properties:
+        reconciliation_status: string
+    client_safe_message: "Transaksi masih dalam pemeriksaan sengketa sehingga faktur atau pembayaran final ditahan."
+    retryable: false
+    required_user_action: "Selesaikan kasus sengketa di modul Rekonsiliasi terlebih dahulu."
+    security_considerations: "Menjamin tidak ada pencairan melewati dispute (AC-014, BIZ-016)."
+    related_operations:
+      - createInvoiceDraft
+      - issueInvoice
+      - approveOrRejectInvoicePayment
+    references:
+      - BSD BR-PAY-005
+      - BSD BIZ-016
+
+  - code: FIN_POLICY_UNCONFIRMED
+    http_status: 409
+    category: Business Conflicts
+    description: "Finalisasi faktur atau transaksi pembayaran nyata ditahan karena model usaha transaksi masih UNCONFIRMED."
+    triggering_condition: "business_model_code == 'UNCONFIRMED' pada saat issue invoice atau approval pembayaran nyata (DBD §10.1, BSD-DEC-001)."
+    field_details:
+      type: object
+      properties:
+        business_model_code: string
+        pending_decision_id: string
+    client_safe_message: "Finalisasi keuangan ditahan karena klasifikasi model usaha kontrak (Principal/Agent) belum disahkan."
+    retryable: false
+    required_user_action: "Sahkan klasifikasi model usaha transaksi sesuai SOP sebelum menerbitkan kewajiban keuangan nyata."
+    security_considerations: "Menegakkan pengaman principal/agent agar nilai principal tidak salah diakui sebagai pendapatan agen (BSD §2.3, §23.3)."
+    related_operations:
+      - issueInvoice
+      - approveOrRejectInvoicePayment
+      - recordPaymentEvidence
+    references:
+      - DBD §10.1
+      - BSD-DEC-001
+
+  - code: PAY_APPROVAL_REQUIRED
+    http_status: 409
+    category: Business Conflicts
+    description: "Pembayaran keluar belum memiliki persetujuan pejabat berwenang sehingga bukti bayar ditolak."
+    triggering_condition: "Mencatat OUTBOUND payment pada invoice yang belum memiliki status payment approval APPROVED (BIZ-020)."
+    field_details: null
+    client_safe_message: "Pembayaran belum disetujui pejabat berwenang sehingga pencatatan pembayaran belum dapat diproses."
+    retryable: false
+    required_user_action: "Ajukan dan tunggu persetujuan pembayaran sesuai matriks otorisasi."
+    security_considerations: "Menegakkan otorisasi sebelum pencatatan pengeluaran."
+    bsd_alias: PAYMENT_NOT_AUTHORIZED
+    related_operations:
+      - recordPaymentEvidence
+    references:
+      - BSD BR-PAY-003
+      - BSD BIZ-020
+
+  - code: PAY_ALREADY_APPROVED
+    http_status: 409
+    category: Business Conflicts
+    description: "Persetujuan pembayaran untuk faktur ini sudah disahkan sebelumnya."
+    triggering_condition: "Duplicate approval attempt setelah keputusan APPROVED/REJECTED selesai (TRD §15.4)."
+    field_details: null
+    client_safe_message: "Permintaan persetujuan pembayaran untuk faktur ini sudah diputuskan sebelumnya."
+    retryable: false
+    required_user_action: "Muat ulang detail faktur untuk melihat keputusan persetujuan terkini."
+    security_considerations: "Mencegah persetujuan ganda yang bersaing."
+    related_operations:
+      - approveOrRejectInvoicePayment
+    references:
+      - TRD §15.4
+      - BSD BR-PAY-011
+
+  - code: PAY_DUPLICATE_PAYMENT
+    http_status: 409
+    category: Business Conflicts
+    description: "Nomor pembayaran atau referensi pembayaran sudah tercatat, atau faktur sudah lunas (PAID)."
+    triggering_condition: "Duplikasi payment_number/payment_reference atau mencoba mencatat pembayaran ke faktur yang telah PAID (BR-PAY-011, BIZ-022)."
+    field_details: null
+    client_safe_message: "Referensi pembayaran sudah pernah tercatat atau kewajiban faktur sudah lunas."
+    retryable: false
+    required_user_action: "Periksa daftar catatan pembayaran pada faktur terkait."
+    security_considerations: "Mencegah pencatatan pembayaran ganda (BR-022, NFR-017)."
+    bsd_alias: PAYMENT_DUPLICATE
+    related_operations:
+      - recordPaymentEvidence
+    references:
+      - BSD BR-PAY-011
+      - BSD §29.1
+
+  - code: PAY_PARTIAL_NOT_SUPPORTED
+    http_status: 422
+    category: Business Conflicts
+    description: "Pembayaran sebagian/termin ditolak secara eksplisit pada baseline MVP."
+    triggering_condition: "amount != invoice.total_amount ketika fitur pembayaran parsial masih belum disahkan SOP (BSD §22.5, AFD §22.7)."
+    field_details:
+      type: object
+      properties:
+        invoice_total_amount: string
+        submitted_amount: string
+    client_safe_message: "Pembayaran sebagian belum didukung pada kebijakan sistem saat ini. Masukkan nominal pelunasan penuh sesuai nilai faktur."
+    retryable: true
+    required_user_action: "Sesuaikan nominal pembayaran agar sama persis dengan total tagihan faktur."
+    security_considerations: "Mencegah saldo parsial yang belum memiliki aturan pelunasan bertahap (BSD-DEC-017)."
+    related_operations:
+      - recordPaymentEvidence
+    references:
+      - BSD §22.5
+      - DBD §14.6
+
+  - code: PAY_AMOUNT_EXCEEDS_INVOICE
+    http_status: 422
+    category: Validation
+    description: "Nominal pembayaran melebihi nilai total kewajiban pada faktur."
+    triggering_condition: "amount > invoice.total_amount atau amount <= 0 (BR-PAY-007, DBD §14.6)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Nominal pembayaran harus positif dan tidak boleh melebihi total tagihan faktur."
+    retryable: true
+    required_user_action: "Periksa ulang nominal pembayaran pada bukti transaksi."
+    security_considerations: "Mencegah kelebihan pembayaran."
+    related_operations:
+      - recordPaymentEvidence
+    references:
+      - BSD BR-PAY-007
+      - DBD §14.6
+
+  - code: PAY_PROOF_REQUIRED
+    http_status: 422
+    category: Validation
+    description: "Verifikasi pembayaran ditolak karena referensi atau berkas bukti pembayaran tidak tersedia."
+    triggering_condition: "Mencoba VERIFY payment record tanpa proof_file_id maupun payment_reference yang lengkap (BR-PAY-009, BR-PAY-010)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Bukti dan referensi pembayaran yang sah wajib tersedia sebelum verifikasi pelunasan."
+    retryable: true
+    required_user_action: "Unggah bukti transfer/pembayaran dan lengkapi nomor referensi terlebih dahulu."
+    security_considerations: "Menjamin tidak ada status PAID tanpa bukti sah (BIZ-021)."
+    related_operations:
+      - recordPaymentEvidence
+      - verifyPaymentRecord
+    references:
+      - BSD BR-PAY-009
+      - BSD BR-PAY-010
+      - BSD BIZ-021
+
+  - code: PAY_INVALID_PARTY_PAIRING
+    http_status: 422
+    category: Validation
+    description: "Arah pembayaran (INBOUND/OUTBOUND) tidak cocok dengan peran pihak creditor/debtor pada faktur."
+    triggering_condition: "Ketidakcocokan arah dana terhadap relasi Perumda pada invoices (DBD §14.5)."
+    field_details:
+      type: array
+      items: ValidationErrorDetail
+    client_safe_message: "Arah pembayaran dan identitas pihak pembayar/penerima tidak sesuai dengan dokumen faktur terkait."
+    retryable: true
+    required_user_action: "Pastikan tipe faktur (AR vs AP) selaras dengan pihak pembayar dan penerima."
+    security_considerations: "Menjaga integritas pemisahan arus dana PKS->Perumda vs Perumda->Mitra (BR-PAY-008)."
+    related_operations:
+      - recordPaymentEvidence
+    references:
+      - DBD §14.5
+      - BSD BR-PAY-008
+
+  - code: PAY_INVALID_STATE_TRANSITION
+    http_status: 409
+    category: Business Conflicts
+    description: "Perubahan status catatan pembayaran melanggar alur SM-11."
+    triggering_condition: "Mencoba memverifikasi pembayaran yang sudah REJECTED/REVERSED/VERIFIED."
+    field_details:
+      type: object
+      properties:
+        current_status: string
+    client_safe_message: "Status catatan pembayaran saat ini tidak dapat diproses ulang dengan tindakan tersebut."
+    retryable: false
+    required_user_action: "Muat ulang daftar pembayaran untuk memeriksa status terkini."
+    security_considerations: "Koreksi pembayaran terverifikasi harus menggunakan reversal, bukan hapus fisik (BSD §22.6)."
+    related_operations:
+      - verifyPaymentRecord
+    references:
+      - DBD §14.5
+      - BSD §22.6
+
+  # =========================================================================
+  # 12. AVAILABILITY, RATE LIMIT & INTERNAL SYSTEM ERRORS (429 / 500 / 503 / 504)
+  # =========================================================================
+  - code: SYS_RATE_LIMIT_EXCEEDED
+    http_status: 429
+    category: Rate Limiting
+    description: "Permintaan melampaui batas laju yang ditetapkan middleware rate limiting."
+    triggering_condition: "Frekuensi panggilan API melampaui kuota per menit klien/pengguna."
+    field_details:
+      type: object
+      properties:
+        retry_after_seconds: integer
+    client_safe_message: "Permintaan terlalu cepat. Tunggu sejenak sebelum mencoba lagi."
+    retryable: true
+    required_user_action: "Kurangi frekuensi permintaan dan coba kembali sesuai Retry-After."
+    security_considerations: "Melindungi endpoint publik maupun privat dari penyalahgunaan (TRD §13.2)."
+    related_operations:
+      - listPublicPrices
+      - listPublicMills
+      - listAuditEvents
+    references:
+      - TRD §13.2
+
+  - code: SYS_DEPENDENCY_UNAVAILABLE
+    http_status: 503
+    category: Availability
+    description: "Dependensi kritikal (PostgreSQL atau penyimpanan sesi wajib) sedang tidak tersedia atau gagal kesiapan."
+    triggering_condition: "PostgreSQL down saat operasi tulis/baca wajib atau Redis gagal pada layanan autentikasi fail-closed (TRD §11.6, §25.1)."
+    field_details: null
+    client_safe_message: "Layanan sistem sedang mengalami gangguan sementara. Silakan coba lagi beberapa saat atau laporkan kode referensi."
+    retryable: true
+    required_user_action: "Tunggu beberapa saat lalu gunakan tombol Coba Lagi; sertakan request_id jika melaporkan kendala."
+    security_considerations: "Kegagalan security store wajib menolak akses fail-closed; tidak menampilkan host/port/password DB."
+    related_operations:
+      - getReadinessHealth
+      - getCurrentUser
+      - issueDeliveryOrder
+    references:
+      - TRD §11.6
+      - TRD §15.4
+      - TRD §25.1
+
+  - code: SYS_REQUEST_TIMEOUT
+    http_status: 504
+    category: Availability
+    description: "Waktu eksekusi operasi atau dependensi eksternal melampaui batas timeout server."
+    triggering_condition: "Query atau pemrosesan melampaui request timeout yang dikonfigurasi (TRD §9.1)."
+    field_details: null
+    client_safe_message: "Permintaan membutuhkan waktu terlalu lama. Periksa status transaksi sebelum mencoba mengirim ulang."
+    retryable: true
+    required_user_action: "Periksa apakah transaksi sebelumnya sudah tercatat (untuk operasi mutasi) sebelum mengulang dengan Idempotency-Key yang tepat."
+    security_considerations: "Untuk operasi mutasi, klien wajib memeriksa status transaksi terlebih dahulu sebelum retry (AFD §33.6)."
+    related_operations:
+      - getSupplyReport
+      - calculateReconciliation
+    references:
+      - TRD §9.1
+      - AFD §33.6
+
+  - code: SYS_INTERNAL_ERROR
+    http_status: 500
+    category: Internal Error
+    description: "Kesalahan internal tak terduga yang ditangkap global exception handler."
+    triggering_condition: "Unhandled exception pada layer aplikasi/infrastruktur."
+    field_details: null
+    client_safe_message: "Terjadi kendala pada sistem. Silakan coba kembali atau hubungi administrator dengan kode referensi yang ditampilkan."
+    retryable: false
+    required_user_action: "Laporkan request_id ke administrator untuk ditelusuri lewat CCTV Digital (AFD §33.5)."
+    security_considerations: "Stack trace hanya ditulis ke structured error log internal, tidak pernah dikirim dalam respons HTTP (TRD §14.5, §15.1)."
+    related_operations: []
+    references:
+      - TRD §14.5
+      - AFD §33.5
