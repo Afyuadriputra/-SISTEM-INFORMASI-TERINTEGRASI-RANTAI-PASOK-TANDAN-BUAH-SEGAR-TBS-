@@ -1,0 +1,174 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Master data petani, kebun, dua koperasi terpisah scope, armada, dan sopir untuk FLOW-05 serta multi-petani."
+  },
+  "cooperatives": [
+    {
+      "id": "40000000-0000-4000-8000-000000000001",
+      "party_id": "10000000-0000-4000-8000-000000000110",
+      "cooperative_code": "KOP-01",
+      "cooperative_name": "KUD Sawit Sejahtera Pelalawan",
+      "address": "Jl. Poros Desa Makmur, Kec. Pangkalan Kerinci, Pelalawan",
+      "contact_phone": "0761-000-301",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000002",
+      "party_id": "10000000-0000-4000-8000-000000000111",
+      "cooperative_code": "KOP-02",
+      "cooperative_name": "KUD Makmur Jaya Ukui",
+      "address": "Jl. Lintas Ukui, Kec. Ukui, Pelalawan",
+      "contact_phone": "0761-000-302",
+      "status": "ACTIVE"
+    }
+  ],
+  "farmers": [
+    {
+      "id": "40000000-0000-4000-8000-000000000101",
+      "party_id": "10000000-0000-4000-8000-000000000101",
+      "farmer_code": "PET-PLW-001",
+      "full_name": "Hendra Wijaya",
+      "contact_phone": "0800-0000-0101",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "membership_number": "KOP01-2026-001",
+      "status": "ACTIVE",
+      "version": 1,
+      "created_at": "2026-10-10T01:00:00Z",
+      "updated_at": "2026-10-10T01:00:00Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000102",
+      "party_id": "10000000-0000-4000-8000-000000000102",
+      "farmer_code": "PET-PLW-002",
+      "full_name": "Siti Aminah",
+      "contact_phone": "0800-0000-0102",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "membership_number": "KOP01-2026-002",
+      "status": "ACTIVE",
+      "version": 1,
+      "created_at": "2026-10-10T01:05:00Z",
+      "updated_at": "2026-10-10T01:05:00Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000103",
+      "party_id": "10000000-0000-4000-8000-000000000103",
+      "farmer_code": "PET-PLW-003",
+      "full_name": "Budi Santoso",
+      "contact_phone": "0800-0000-0103",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "membership_number": "KOP01-2026-003",
+      "status": "ACTIVE",
+      "version": 1,
+      "created_at": "2026-10-10T01:10:00Z",
+      "updated_at": "2026-10-10T01:10:00Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000104",
+      "party_id": "10000000-0000-4000-8000-000000000104",
+      "farmer_code": "PET-PLW-004",
+      "full_name": "Darman (Status Nonaktif Histori Terjaga)",
+      "contact_phone": "0800-0000-0104",
+      "cooperative_id": "40000000-0000-4000-8000-000000000001",
+      "membership_number": "KOP01-2025-099",
+      "status": "INACTIVE",
+      "version": 2,
+      "created_at": "2026-08-01T01:00:00Z",
+      "updated_at": "2026-10-20T03:00:00Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000105",
+      "party_id": "10000000-0000-4000-8000-000000000101",
+      "farmer_code": "PET-UKI-001",
+      "full_name": "Rudi Hartono (Koperasi Scope KOP-02)",
+      "contact_phone": "0800-0000-0105",
+      "cooperative_id": "40000000-0000-4000-8000-000000000002",
+      "membership_number": "KOP02-2026-001",
+      "status": "ACTIVE",
+      "version": 1,
+      "created_at": "2026-10-12T01:00:00Z",
+      "updated_at": "2026-10-12T01:00:00Z"
+    }
+  ],
+  "farms": [
+    {
+      "id": "40000000-0000-4000-8000-000000000201",
+      "farmer_id": "40000000-0000-4000-8000-000000000101",
+      "farm_code": "KBN-001-A",
+      "farm_name": "Kebun Swadaya Blok A Desa Makmur",
+      "area_hectares": "2.5000",
+      "planting_year": 2014,
+      "stdb_number": "STDB-SIM-1405-001",
+      "village": "Desa Makmur",
+      "district": "Pangkalan Kerinci",
+      "latitude": "0.381200",
+      "longitude": "101.842100",
+      "verification_status": "VERIFIED",
+      "is_public_location": false,
+      "version": 1,
+      "created_at": "2026-10-10T01:15:00Z",
+      "updated_at": "2026-10-10T01:15:00Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000202",
+      "farmer_id": "40000000-0000-4000-8000-000000000102",
+      "farm_code": "KBN-002-A",
+      "farm_name": "Kebun Swadaya Sungai Kijang",
+      "area_hectares": "1.8000",
+      "planting_year": 2016,
+      "stdb_number": null,
+      "village": "Kuala Terusan",
+      "district": "Pangkalan Kerinci",
+      "latitude": null,
+      "longitude": null,
+      "verification_status": "UNVERIFIED",
+      "is_public_location": false,
+      "version": 1,
+      "created_at": "2026-10-10T01:20:00Z",
+      "updated_at": "2026-10-10T01:20:00Z"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000203",
+      "farmer_id": "40000000-0000-4000-8000-000000000103",
+      "farm_code": "KBN-003-A",
+      "farm_name": "Kebun Swadaya Rantau Baru",
+      "area_hectares": "3.2500",
+      "planting_year": 2013,
+      "stdb_number": "STDB-SIM-1405-003",
+      "village": "Rantau Baru",
+      "district": "Pangkalan Kerinci",
+      "latitude": "0.365100",
+      "longitude": "101.889200",
+      "verification_status": "VERIFIED",
+      "is_public_location": false,
+      "version": 1,
+      "created_at": "2026-10-10T01:25:00Z",
+      "updated_at": "2026-10-10T01:25:00Z"
+    }
+  ],
+  "vehicles": [
+    {
+      "id": "40000000-0000-4000-8000-000000000301",
+      "plate_number": "BM 9042 TS",
+      "vehicle_type": "Truk Colt Diesel 6 Roda",
+      "nominal_capacity_kg": "12000.000",
+      "status": "ACTIVE"
+    },
+    {
+      "id": "40000000-0000-4000-8000-000000000302",
+      "plate_number": "BM 9108 AG",
+      "vehicle_type": "Dump Truck Fuso",
+      "nominal_capacity_kg": "18000.000",
+      "status": "ACTIVE"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "40000000-0000-4000-8000-000000000401",
+      "full_name": "Rahmat Hidayat (Sopir Simulasi)",
+      "contact_phone": "0800-0000-0401",
+      "driver_reference": "DRV-KOP01-01",
+      "status": "ACTIVE"
+    }
+  ]
+}
