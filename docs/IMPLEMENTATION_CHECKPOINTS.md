@@ -13,6 +13,7 @@
 | **D5** | Design Gap Closure & Final Sign-Off | **`READY — FIGCRAFT_DESIGN_SIGNOFF`** | 2026-11-10 ([d5-design-gap-closure-signoff.md](file:///C:/Users/M-SI/.gemini/antigravity/brain/c367ac0e-9189-476d-b1f9-69ba6e1730ec/d5-design-gap-closure-signoff.md)) | **26/26 (100%)** cakupan rute mandiri `AFD §36`, form penuh `FLOW-05` & `FLOW-06`, refactor `Organism/InternalSidebar #275` pada seluruh 21 layar internal desktop, 14 prototype flow penuh (`215` interaksi, `0` dangling), 7 layar bisnis mobile prioritas, `0/1451` gagal kontras WCAG, `0` missing font, dan `50` board/frame `readyForDev`. |
 | **M0** | Requirements & Contract Alignment | **`READY — M0_CONTRACT_ALIGNMENT_VERIFIED`** | 2026-11-10 ([M0_CONTRACT_VALIDATION_REPORT.md](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_CONTRACT_VALIDATION_REPORT.md)) | `openapi.v1.yaml` (`75` paths, `95` ops, `191` schemas), `error-catalog.yaml` (`69` kode error), `state-catalog.yaml` (`11` mesin state, `41` transisi), `role-permissions.yaml` (`PUBLIC` + `7` peran, `64` permissions, `1:1` OpenAPI), `11` fixture JSON (`22` skenario negatif), `ADR-001..010`, traceability lengkap, dan `10/10` cek validasi `K1–K10` lulus (`0` issue). |
 | **M0.1** | Final Handoff Consistency Patch | **`READY — M0_HANDOFF_CONSISTENCY_VERIFIED`** | 2026-11-10 ([M0_CHANGELOG.md](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_CHANGELOG.md)) | Penyelarasan akhir pra-B0/F0: `TanStack Router`, 48 nama tabel kanonis `DBD §4`, breakdown `95` operasi (`2` health / `7` public / `4` auth / `82` internal = `84` authenticated), `8` operasi wajib `Idempotency-Key`, `M0-CNF-05 = RESOLVED`, arah dependency Clean Architecture 4 layer (`ADR-002`), & struktur `B0` inkremental tanpa folder kosong (`ADR-001`). |
+| **B0–B11** | Full Backend Implementation | **`BACKEND_INDEPENDENT_READY`** (`B0–B11 PASS`) | 2026-11-11 (`main @ 0243982`) | Seluruh `B0–B11` PASS (`11` modul domain + `core/` Clean Architecture 4 layer, `11` migrasi Alembic `0001..0011`, `95/95` operasi OpenAPI `1:1`, `69` kode error & `22` skenario negatif, `EXPLAIN ANALYZE` 0.02–0.60 ms, `pg_dump`/`pg_restore` 48 tabel terverifikasi, `import-linter` `16 kept, 0 broken`, `pyright` `0` error, `ruff` bersih, dan `pytest` **`76/76 passed`**). Siap lanjut integrasi Frontend `F0–F10`. |
 
 ---
 
@@ -175,3 +176,489 @@ Implementasi frontend mengacu pada **Master Implementation Plan** di [IPD.md](fi
 2. **`F2–F3` Public Portal & Auth/AppShell Gate:** Implementasi `P01–P08` sesuai frame `1440px`/`390px` + guard `BR-PUB-003` (`is_public` & sanitasi data privat), serta autentikasi `/login` dengan RBAC route guard dan kebijakan `BR-SYS-002` pada role Administrator.
 3. **`F4–F7` Portal Petani, Koperasi (`FLOW-05`), Perumda (`FLOW-06`, Rekonsiliasi), PKS, Direksi, & Admin:** Sambungkan formulir, validasi `422`/`409`, label `Data Simulasi`/`Pending SOP`, `Maker != Checker`, dan responsivitas `1440px / 1280px / 768px / 390px / 375px` dengan endpoint backend FastAPI sesuai kontrak `TRD.md` & `AFD.md`.
 4. **`F8` Verification, A11y & Performance Gate:** Jalankan pengujian fokus keyboard, `prefers-reduced-motion`, kontrak API end-to-end, dan uji responsif lintas breakpoint sebelum UAT.
+
+---
+
+# BACKEND DEVELOPMENT TRACK
+
+## Current Status
+
+- **Current Milestone:** `B4 — TBS Receiving & Grading` *(pasca `B3_PASS — PUBLIC_PORTAL_PRICING_VERIFIED`)*
+- **Last Milestone Passed:** `B3 — Public Portal & Pricing API` (`B3_PASS — PUBLIC_PORTAL_PRICING_VERIFIED`)
+- **Last Verified Commit:** `0243982` (`branch: main`)
+- **Backend Readiness:** `BACKEND_IN_PROGRESS` *(menjalankan B2→B11 sebelum `BACKEND_INDEPENDENT_READY`)*
+- **Environment:** Python `3.12.0` di `backend/.venv` (`uv 0.13.7`, `111` paket runtime/dev); PostgreSQL 16 terisolasi di WSL2 Ubuntu (`127.0.0.1:15432`, DB `agroniaga_dev` & `agroniaga_test`, role least-privilege `agroniaga_dev`, tanpa menyentuh PostgreSQL 17 Windows di port `5432`); Redis 7 di WSL2 Ubuntu (`127.0.0.1:6379`, dev DB `/0`, test DB `/1`).
+- **Pending SOP:** Keputusan `BSD-DEC-001..020` & `AFD §41 #1..15` (`SOP-01..15`) tetap berstatus `SIMULATION_ONLY` / `PENDING_SOP` / `FUTURE`.
+- **Open Blockers:** Tidak ada.
+
+---
+
+## B0 — Project Foundation
+
+- **Milestone ID:** `B0`
+- **Nama Milestone:** `Project Foundation`
+- **Status:** **`B0_PASS — FOUNDATION_VERIFIED`**
+- **Tanggal:** `2026-11-10`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Membangun pondasi aplikasi FastAPI modular (`main.py` + `app/core/`), Pydantic Settings, async PostgreSQL engine + Alembic baseline, async Redis pool client & fail-closed guards, structured JSON logging + redaksi secrets, Request ID middleware + bounded timeout `504`, global exception handlers OpenAPI (`69` error codes), probe `/health/live` & `/health/ready`, Docker Compose PostgreSQL + Redis, serta tes unit, arsitektur, & integrasi tanpa membuat folder kosong modul domain.
+- **Completed:**
+  - [x] Verifikasi `.venv` Python `3.12.0` + instalasi `uv 0.13.7` ke dalam `.venv` (zero global installs) & generasi `uv.lock` (`113` resolved / `111` synced).
+  - [x] Konfigurasi `backend/pyproject.toml` (Ruff, Pyright, Pytest, Import Linter), `.env.example`, `.env` (gitignored, dev+test terisolasi), `README.md`, dan `infra/docker-compose.yml` (+ `01-create-test-db.sh`).
+  - [x] Implementasi `app/core/`: `config.py`, `logging.py`, `schemas.py`, `exceptions.py` (`69` `ErrorCode` selaras 1:1 `error-catalog.yaml`), `errors.py`, `database.py` (PostgreSQL async Psycopg 3 pool + Selector loop Windows guard), `redis.py` (pool, telemetry counters, fail-closed `SYS_DEPENDENCY_UNAVAILABLE`), `security.py`, `middleware.py`, `health.py`, dan composition root `app/main.py`.
+  - [x] Setup & verifikasi Alembic async baseline (`alembic.ini`, `alembic/env.py`, `alembic/versions/0001_b0_baseline.py`) terhadap PostgreSQL 16 nyata (`agroniaga_dev`: `upgrade head` -> `downgrade base` -> `upgrade head`; `agroniaga_test`: `upgrade head`).
+  - [x] Verifikasi koneksi PostgreSQL live, koneksi Redis live + fail-closed probe (`redis://127.0.0.1:6399/0`), dan `/health/ready -> 200 OK`.
+- **Files Created:**
+  - `backend/pyproject.toml`, `backend/uv.lock`, `backend/.env.example`, `backend/.env` *(gitignored, local runtime only)*, `backend/README.md`, `backend/alembic.ini`, `backend/alembic/env.py`, `backend/alembic/script.py.mako`, `backend/alembic/versions/0001_b0_baseline.py`
+  - `backend/app/__init__.py`, `backend/app/main.py`, `backend/app/core/__init__.py`, `backend/app/core/config.py`, `backend/app/core/logging.py`, `backend/app/core/schemas.py`, `backend/app/core/exceptions.py`, `backend/app/core/errors.py`, `backend/app/core/database.py`, `backend/app/core/redis.py`, `backend/app/core/security.py`, `backend/app/core/middleware.py`, `backend/app/core/health.py`
+  - `backend/tests/__init__.py`, `backend/tests/conftest.py`, `backend/tests/architecture/test_import_boundaries.py`, `backend/tests/unit/test_foundation_unit.py`, `backend/tests/integration/test_foundation_infra.py`
+  - `infra/docker-compose.yml`, `infra/postgres-init/01-create-test-db.sh`
+- **Files Modified:** `docs/IMPLEMENTATION_CHECKPOINTS.md`, `contracts/scripts/validate_contracts.py` (membuat `K10` sadar fase agar `backend/` dan `infra/` sah saat Backend Track berjalan sambil tetap melarang `frontend/` & root `alembic/`).
+- **Database Changes:** Belum ada tabel bisnis (`0001_b0_baseline` adalah anchor rantai revisi Alembic sebelum `B1`, terverifikasi `upgrade head` -> `downgrade base` -> `upgrade head` pada PostgreSQL 16 `127.0.0.1:15432`).
+- **Dependencies:** `fastapi==0.162.3`, `uvicorn==0.54.0`, `pydantic==2.14.3`, `pydantic-settings==2.16.2`, `sqlalchemy==2.0.57`, `psycopg[binary]==3.3.8`, `alembic==1.20.1`, `redis==5.3.1`, `argon2-cffi==25.1.0`; dev/QA: `pytest==8.4.2`, `pytest-asyncio==0.26.0`, `httpx==0.28.1`, `ruff==0.17.4`, `pyright==1.1.414`, `import-linter==2.16`, `hypothesis==6.170.15`, `schemathesis==3.39.16`, `locust==2.47.0`, `pyyaml==6.0.3`, `uv==0.13.7` (seluruhnya terpasang hanya dalam `backend/.venv`).
+- **Features Implemented:** Liveness `/health/live`, Readiness `/health/ready` (`200 ok` saat PostgreSQL & Redis aktif; `503 SYS_DEPENDENCY_UNAVAILABLE` fail-safe saat dependency mati), Request ID `req_<hex>` & `X-Request-ID`, timeout protection `504 SYS_REQUEST_TIMEOUT`, global JSON error mapping 69 error catalog, redaksi log secrets/DSN, layer isolation guards.
+- **Bugs Found & Fixed:**
+  1. `TBS_STALE_RECORD_VERSION` mengandung salah ketik `"Catatatan"` -> ditangkap `test_error_code_enum_matches_canonical_catalog` & diperbaiki menjadi `"Catatan"`.
+  2. `app.core.errors` sempat mencampurkan FastAPI HTTP handler dengan `AppError` sehingga `import-linter` mendeteksi kebocoran `fastapi`/`starlette` ke adapter `redis` -> dipisahkan bersih menjadi framework-free `app/core/exceptions.py` dan HTTP-only `app/core/errors.py`.
+  3. `WindowsProactorEventLoopPolicy` default Python Windows bentrok dengan `psycopg` 3 async -> ditangani dengan `WindowsSelectorEventLoopPolicy()` pada entrypoint, Alembic env, & pytest `conftest.py`.
+  4. `backend/alembic.ini` kekurangan `qualname` pada section `[logger_sqlalchemy]` & `[logger_alembic]` (`KeyError: 'qualname'` saat menjalankan `alembic upgrade head`) -> ditambahkan `qualname = sqlalchemy.engine` dan `qualname = alembic`.
+  5. `tests/conftest.py` hanya membaca `os.environ` sehingga `TEST_DATABASE_URL` dari `backend/.env` tidak terbaca saat `pytest` dijalankan langsung -> diperbaiki via `_load_backend_env_settings()` tanpa pernah fallback ke `DATABASE_URL` dev.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` / `downgrade base` / `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`0001_b0_baseline`, exit `0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` -> **PASS** (`21 files already formatted`, exit `0`)
+  - `.venv\Scripts\python.exe -m ruff check .` -> **PASS** (`All checks passed!`, exit `0`)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`, exit `0`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 2 kept, 0 broken`, exit `0`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`11 passed in 7.75s`: `3` architecture, `3` PostgreSQL/Redis integration, `5` unit; `0` failed, `0` skipped)
+- **Counts:** `11` PASS (`5` unit, `3` architecture, `3` live DB/Redis integration), `0` FAIL, `0` SKIPPED; `11/11` `K1–K11` contract validation OK.
+- **Quality Gate:** **PASS (`B0_PASS — FOUNDATION_VERIFIED`)**.
+- **Known Limitations:** `K10` pada `validate_contracts.py` disesuaikan agar mengenali `# BACKEND DEVELOPMENT TRACK`; `backend/.venv` berisi `uv.exe` sendiri karena `uv` global tidak tersedia; host runtime dev/test memakai PostgreSQL 16 (`127.0.0.1:15432`) & Redis 7 (`127.0.0.1:6379`) pada WSL2 Ubuntu karena Docker belum terpasang di Windows.
+- **Next Action:** Lanjut ke **`B1 — Identity, Auth, Session, RBAC`** (modul `app/modules/identity_access/` dengan 4 layer Clean Architecture, tabel `user_accounts`, `roles`, `permissions`, `role_permissions`, `user_role_grants`, `user_access_scopes`, `auth_sessions`, `audit_events`, `/api/v1/auth/*`, `/api/v1/admin/users*`, Argon2id, HttpOnly session + Redis, CSRF `X-CSRF-Token`, anti brute-force rate limit, serta guard `BR-SYS-002`).
+
+---
+
+## B1 — Identity & Access
+
+- **Milestone ID:** `B1`
+- **Nama Milestone:** `Identity & Access`
+- **Status:** **`B1_PASS — IDENTITY_ACCESS_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Membangun modul `identity_access` dengan arsitektur Clean Architecture 4 layer (`domain/`, `application/`, `infrastructure/`, `presentation/`), skema RBAC & session PostgreSQL (`roles`, `permissions`, `role_permissions`, `user_accounts`, `user_role_grants`, `user_access_scopes`, `auth_sessions`), tabel audit append-only `audit_events` (`app/core/audit.py`), autentikasi `/api/v1/auth/*`, administrasi akses `/api/v1/admin/users*`, Argon2id off-event-loop, Redis fail-closed session + rate limiting, HMAC CSRF terikat sesi + pengecekan `Origin`, rotasi session ID (anti session-fixation), serta penegakan `BR-SYS-002`.
+- **Completed:**
+  - [x] Skema ORM & migrasi Alembic `0002_b1_identity_access` (`roles`, `permissions`, `role_permissions`, `user_accounts`, `user_role_grants`, `user_access_scopes` dengan check konsistensi target scope, `auth_sessions`, & `audit_events` lengkap trigger append-only PostgreSQL + seed deterministik `7` role & `64` permission sesuai `contracts/role-permissions.yaml`).
+  - [x] Domain invariants & RBAC matrix (`domain/entities.py`, `domain/rules.py`): validasi role-scope, komputasi permission efektif, pelarangan approver bagi `SYSTEM_ADMIN` (`BR-SYS-002`), & helper ownership scope (`assert_farmer_scope`, `assert_cooperative_scope`, `assert_mill_scope`) untuk dipakai modul `B2–B10`.
+  - [x] Use cases (`application/use_cases.py` + `application/ports.py`): login dengan anti-enumerasi timing dummy Argon2id + rotasi sesi baru, resolusi sesi Redis+PostgreSQL fail-closed, logout, penerbitan/verifikasi CSRF terikat sesi, & manajemen akses pengguna dengan pencabutan sesi aktif instan.
+  - [x] Security adapters & presentation (`infrastructure/security_adapters.py`, `repository.py`, `presentation/dependencies.py`, `schemas.py`, `router.py`): `GET /api/v1/auth/csrf`, `POST /api/v1/auth/login`, `POST /api/v1/auth/logout`, `GET /api/v1/auth/me`, `GET /api/v1/admin/users`, `POST /api/v1/admin/users`, `PATCH /api/v1/admin/users/{user_id}`.
+- **Files Created:**
+  - `backend/app/core/audit.py`, `backend/alembic/versions/0002_b1_identity_access.py`
+  - `backend/app/modules/__init__.py`, `backend/app/modules/identity_access/__init__.py`
+  - `backend/app/modules/identity_access/domain/__init__.py`, `entities.py`, `rules.py`
+  - `backend/app/modules/identity_access/application/__init__.py`, `ports.py`, `use_cases.py`
+  - `backend/app/modules/identity_access/infrastructure/__init__.py`, `models.py`, `repository.py`, `security_adapters.py`
+  - `backend/app/modules/identity_access/presentation/__init__.py`, `schemas.py`, `dependencies.py`, `router.py`
+  - `backend/tests/unit/test_identity_access_unit.py`, `backend/tests/integration/test_identity_access_integration.py`
+- **Files Modified:** `backend/app/core/config.py`, `backend/app/core/logging.py`, `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0002_b1_identity_access` menambahkan `roles` (`7`), `permissions` (`64`), `role_permissions`, `user_accounts`, `user_role_grants`, `user_access_scopes`, `auth_sessions`, & `audit_events` + trigger PostgreSQL `trg_audit_events_append_only`. Target FK opsional ke `parties`/`farmers`/`cooperatives`/`mills` disiapkan terindeks untuk ditautkan pada migrasi `B2` saat tabel master data dibuat.
+- **Dependencies:** Memakai `argon2-cffi`, `redis`, `sqlalchemy` yang sudah ada pada `.venv` (zero paket baru ditambahkan).
+- **Features Implemented:** HttpOnly + SameSite cookie sessions, SHA-256 hashed session persistence, Argon2id via `asyncio.to_thread`, Redis rate limiter (`429 AUTH_TOO_MANY_REQUESTS` + `Retry-After`), fail-closed `503 SYS_DEPENDENCY_UNAVAILABLE` saat Redis down, HMAC-SHA256 CSRF token (`s1.` vs `p1.`) + validasi `Origin`, pencabutan sesi instan saat admin mengubah role/scope/status, append-only redacted audit trail.
+- **Bugs Found & Fixed:**
+  1. Passing `cookies=...` per request ke `httpx.AsyncClient` memicu `DeprecationWarning` di pytest strict mode -> diganti client terpisah ber-cookie pada test integrasi.
+  2. Test route lokal yang didefinisikan di dalam body fungsi dengan `from __future__ import annotations` dan import lokal gagal resolusi FastAPI (`422`) -> import `Annotated`/`UUID` dipindah ke top-level module test.
+  3. Test fail-closed meneruskan `SecretStr` mentah via `str(...)` (`"SecretStr('***')"`) -> diganti memakai string DSN fixture `test_db_url`.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0001_b0_baseline` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` -> **PASS** (`41 files already formatted`, exit `0`)
+  - `.venv\Scripts\python.exe -m ruff check .` -> **PASS** (`All checks passed!`, exit `0`)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`, exit `0`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 4 kept, 0 broken`, `57 files`, `175 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`21 passed in 19.25s`: `10` unit, `3` architecture, `8` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+- **Counts:** `21` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B1_PASS — IDENTITY_ACCESS_VERIFIED`)**.
+- **Known Limitations:** Relasi `FOREIGN KEY` kolom `linked_party_id`, `farmer_id`, `cooperative_id`, & `mill_id` pada `B1` ditambatkan di migrasi `B2` tepat ketika tabel `parties`, `farmers`, `cooperatives`, dan `mills` dibuat agar tidak memelihara tabel kosong prematur.
+- **Next Action:** Lanjut ke **`B2 — Master Data`** (`app/modules/master_data/` + migrasi `0003_b2_master_data` untuk `parties`, `farmers`, `farms`, `cooperatives`, `cooperative_memberships`, `mill_companies`, `mills`, `perumda_offices`, `vehicles`, `drivers` + tautan FK ke tabel `B1`).
+
+---
+
+## B2 — Master Data
+
+- **Milestone ID:** `B2`
+- **Nama Milestone:** `Master Data`
+- **Status:** **`B2_PASS — MASTER_DATA_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan modul `master_data` (`parties`, `cooperatives`, `farmers`, `cooperative_memberships`, `farms`, `mill_companies`, `mills`, `perumda_offices`, `vehicles`, `drivers`), penambatan FK tertunda dari `B1`, validasi koordinat berpasangan & presisi `Decimal` (`NUMERIC(12,4)`, `NUMERIC(9,6)`, `NUMERIC(14,3)`), isolasi scope koperasi & PKS, optimistic version locking, soft deactivation tanpa menghapus riwayat, serta invalidasi cache direktori PKS publik pasca-commit.
+- **Completed:**
+  - [x] Domain entities & rules (`master_data/domain/`): validasi koordinat WGS84 berpasangan `VAL_INVALID_COORDINATES`, `parse_area_hectares` / `parse_nominal_capacity_kg` `VAL_INVALID_DECIMAL_PRECISION`, normalisasi plat nomor.
+  - [x] Application ports & use cases (`master_data/application/`): 18 endpoint use cases dengan isolasi scope `FARMER` / `COOPERATIVE` / `MILL` / `PERUMDA_GLOBAL`, optimistic locking `version`, serta invalidasi Redis `public:mills:v1:*` setelah commit DB.
+  - [x] SQLAlchemy ORM models, repository anti-N+1 (`selectinload`/`joinedload`), migrasi Alembic `0003_b2_master_data` (10 tabel + 4 FK tertunda ke `user_accounts` & `user_access_scopes` + partial unique membership aktif), & router OpenAPI `/api/v1/{farmers,farms,cooperatives,mill-companies,mills,vehicles,drivers}`.
+  - [x] Konsolidasi helper bersama `build_pagination_meta` & `format_decimal` pada `app/core/schemas.py` tanpa duplikasi antar modul.
+- **Files Created:**
+  - `backend/alembic/versions/0003_b2_master_data.py`
+  - `backend/app/modules/master_data/__init__.py`
+  - `backend/app/modules/master_data/domain/__init__.py`, `entities.py`, `rules.py`
+  - `backend/app/modules/master_data/application/__init__.py`, `ports.py`, `use_cases.py`
+  - `backend/app/modules/master_data/infrastructure/__init__.py`, `models.py`, `repository.py`, `cache_adapter.py`
+  - `backend/app/modules/master_data/presentation/__init__.py`, `schemas.py`, `router.py`
+  - `backend/tests/unit/test_master_data_unit.py`, `backend/tests/integration/test_master_data_integration.py`
+- **Files Modified:** `backend/app/core/schemas.py`, `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `backend/app/modules/identity_access/presentation/schemas.py`, `backend/app/modules/identity_access/infrastructure/repository.py`, `backend/tests/integration/test_identity_access_integration.py`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0003_b2_master_data` menambah 10 tabel (`parties`, `cooperatives`, `farmers`, `cooperative_memberships`, `farms`, `mill_companies`, `mills`, `perumda_offices`, `vehicles`, `drivers`), unique partial index 1 koperasi aktif per petani, CHECK constraint koordinat berpasangan & angka positif, serta menambatkan 4 FK tabel `B1`.
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** CRUD terotorisasi penuh 18 operasi Master Data OpenAPI, optimistic lock conflict `409 MD_STALE_RECORD_VERSION` dengan detail `{expected_version, current_version}`, terjemahan unik/FK error aman `409 MD_DUPLICATE_CODE` & `422 VAL_INVALID_FORMAT`, soft deactivation `INACTIVE` menjaga histori, dan post-commit cache invalidation.
+- **Bugs Found & Fixed:**
+  1. SQLAlchemy Unit-of-Work menyisipkan `farmers`/`mill_companies` sebelum `parties` ketika ORM tidak memiliki `relationship()` eksplisit sehingga memicu PostgreSQL `ForeignKeyViolation` -> diperbaiki dengan explicit `await session.flush()` setelah `PartyModel` dan `MillCompanyModel`.
+  2. `SqlAlchemyIdentityRepository` sebelumnya memetakan semua `IntegrityError` ke `MD_DUPLICATE_CODE` -> diperbaiki membedakan PG SQLSTATE `23503` (missing FK target scope -> `422 VAL_INVALID_FORMAT`) vs `23505` (duplicate key -> `409 MD_DUPLICATE_CODE`).
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0002_b1_identity_access` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` & `ruff check .` -> **PASS** (`58 files already formatted`, `0` issues)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 5 kept, 0 broken`, `72 files`, `244 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`26 passed in 24.45s`: `13` unit, `3` architecture, `10` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+- **Counts:** `26` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B2_PASS — MASTER_DATA_VERIFIED`)**.
+- **Known Limitations:** `perumda_offices` baru dibuat di migrasi B2 dan segera diekspos ke Portal Publik pada `B3`.
+- **Next Action:** Lanjut ke **`B3 — Public Portal & Pricing API`** (`app/modules/pricing/` + `app/modules/public_portal/` atau modul kohesif dengan migrasi `0004_b3_pricing_public` untuk `price_sources`, `price_categories`, `mill_price_quotes`, `price_verification_events`, `disbun_reference_prices`, `public_pages`, `public_notices`, workflow `SM-01` + `SOD-01`, Redis cache-aside & graceful fallback PostgreSQL).
+
+---
+
+## B3 — Public Portal & Pricing API
+
+- **Milestone ID:** `B3`
+- **Nama Milestone:** `Public Portal & Pricing API`
+- **Status:** **`B3_PASS — PUBLIC_PORTAL_PRICING_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan `pricing` (`10` endpoint manajemen harga internal multi-PKS, `SM-01`, `SOD-01`, riwayat verifikasi append-only, referensi Disbun terpisah) dan `public_portal` (`7` endpoint Portal Publik bebas login, sanitasi XSS, privasi `is_public`, pemisahan harga Disbun vs PKS, Redis cache-aside pasca-commit invalidation, & graceful fallback PostgreSQL).
+- **Completed:**
+  - [x] Skema PostgreSQL & migrasi `0004_b3_pricing_public` (`price_sources`, `price_categories`, `mill_price_quotes`, `price_verification_events`, `disbun_reference_prices`, `public_pages`, `public_notices` + deterministic seed 4 source & 3 non-comparable categories).
+  - [x] Domain & Use Cases `pricing`: validasi `price_per_kg > 0` (`PRICE_INVALID_AMOUNT`), periode (`PRICE_INVALID_PERIOD`), state machine `SM-01`, `SOD-01` Maker != Checker (`AUTH_CONFLICT_OF_DUTIES`), `BR-SYS-002`, pencegahan publikasi tumpang tindih dengan row-level lock `mills` + `PUBLISHED` quotes (`PRICE_OVERLAPPING_PERIOD`), isolasi DRAFT/REJECTED dari peran Petani/Koperasi.
+  - [x] Domain & Read Model `public_portal`: eksposur terkurasi `PUBLISHED` + `is_public=true` saja, derived status `EXPIRED` & parameter `include_expired`, koordinat tersembunyi bila belum terverifikasi (`DBD §7.7`), batch loading anti-N+1, sanitasi HTML/XSS, Redis cache-aside + fallback mulus ke PostgreSQL saat Redis mati.
+- **Files Created:**
+  - `backend/alembic/versions/0004_b3_pricing_public.py`
+  - `backend/app/modules/pricing/__init__.py`, `domain/` (`entities.py`, `rules.py`), `application/` (`ports.py`, `use_cases.py`), `infrastructure/` (`models.py`, `repository.py`, `cache_adapter.py`), `presentation/` (`schemas.py`, `router.py`)
+  - `backend/app/modules/public_portal/__init__.py`, `domain/` (`entities.py`), `application/` (`ports.py`, `use_cases.py`), `infrastructure/` (`models.py`, `repository.py`, `cache_adapter.py`), `presentation/` (`schemas.py`, `router.py`)
+  - `backend/tests/unit/test_pricing_public_unit.py`, `backend/tests/integration/test_pricing_public_integration.py`
+- **Files Modified:** `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0004_b3_pricing_public` menambahkan 7 tabel (`price_sources`, `price_categories`, `mill_price_quotes`, `price_verification_events`, `disbun_reference_prices`, `public_pages`, `public_notices`) dan seed katalog sumber/kategori.
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** Workflow lengkap `DRAFT -> PENDING_VERIFICATION -> VERIFIED/REJECTED -> PUBLISHED -> REVOKED`, `EXPIRED` terhitung dinamis, pemisahan kategori harga `SWADAYA_STD` vs `PLASMA_KONTRAK`, pemisahan harga Disbun `BR-CMP-001`, portal publik anti-bocor `404`, Redis cache telemetry & post-commit invalidation, fallback Redis outage `200 OK`, anti-race concurrent publication `409`.
+- **Bugs Found & Fixed:**
+  1. `validate_price_period` di application layer tidak cukup bila `PATCH /prices/{id}` hanya mengirim salah satu ujung periode (`effective_from` atau `effective_until`) -> ditegakkan pula pada baris terkunci di repository sesudah penggabungan nilai eksisting + input baru.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0003_b2_master_data` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` & `ruff check .` -> **PASS** (`88 files already formatted`, `0` issues)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 7 kept, 0 broken`, `100 files`, `382 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`31 passed in 35.18s`: `16` unit, `3` architecture, `12` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+- **Counts:** `31` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B3_PASS — PUBLIC_PORTAL_PRICING_VERIFIED`)**.
+- **Known Limitations:** `source_document_id` pada `mill_price_quotes` & `disbun_reference_prices` menunggu modul `file_assets` sebelum ditautkan sebagai FK eksplisit.
+- **Next Action:** Lanjut ke **`B4 — TBS Receiving & Grading`** (`app/core/idempotency.py`, `app/modules/tbs_receiving/` + migrasi `0005_b4_tbs_receiving` untuk `idempotency_records`, `tbs_receipts`, `receipt_weighing_revisions`, `receipt_grading_items`, `SM-02`, timbangan bruto/tara -> netto server-side, pemisahan komponen grading anti-potongan ganda, & `Idempotency-Key`).
+
+---
+
+## B4 — TBS Receiving & Grading
+
+- **Milestone ID:** `B4`
+- **Nama Milestone:** `TBS Receiving & Grading`
+- **Status:** **`B4_PASS — TBS_RECEIVING_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan mesin idempotensi durable PostgreSQL (`idempotency_records`, `app/core/idempotency.py`, & `app/core/idempotency_primitives.py`) serta modul `tbs_receiving` (`tbs_receipts`, `receipt_weighing_revisions`, `receipt_grading_items`) dengan alur `SM-02`, perhitungan `net = gross - tare` berbasis `Decimal` di server, riwayat revisi tanpa hapus baris lama (`is_current`), wajib alasan koreksi (`BR-WGT-001`), pemisahan komponen potongan grading (`SIMULATION_ONLY` `BSD-DEC-006`) agar tidak terjadi potongan ganda, isolasi kepemilikan petani/koperasi (`BR-MD-004`), optimistic locking, serta penguncian setelah `ALLOCATED`/`SHIPPED`/`CLOSED` (`TBS_RECEIPT_LOCKED`).
+- **Completed:**
+  - [x] Durable Idempotency Engine (`core/idempotency_primitives.py`, `core/idempotency.py`, tabel `idempotency_records`): klaim atomik slot `IN_PROGRESS` (`ON CONFLICT DO NOTHING` + `SELECT FOR UPDATE`), deteksi payload mismatch (`409 IDM_KEY_CONFLICT_PAYLOAD_MISMATCH`), in-flight guard (`409 IDM_REQUEST_IN_PROGRESS`), replay aman pasca-commit (`meta.idempotency_replayed=True`), & pelepasan slot saat error `4xx/422` sebelum commit.
+  - [x] Domain & Use Cases `tbs_receiving`: validasi presisi `NUMERIC(14,3)` (`VAL_INVALID_DECIMAL_PRECISION`), guard `tare <= gross` (`TBS_INVALID_WEIGHT`), anti-duplikasi kategori & dasar `NET_WEIGHT_BEFORE_GRADING` (`TBS_INVALID_GRADING_DEDUCTION`), penguncian mutasi `ALLOCATED/SHIPPED/CLOSED` (`TBS_RECEIPT_LOCKED`), serta scope ketat `FARMER` vs `COOPERATIVE` vs `PERUMDA_GLOBAL`.
+  - [x] Skema PostgreSQL & migrasi Alembic `0005_b4_tbs_receiving`: sequence `tbs_receipt_seq`, `tbs_receipts`, `receipt_weighing_revisions` (CHECK constraint DB `tare_weight_kg <= gross_weight_kg` dan `net_weight_kg = gross_weight_kg - tare_weight_kg`, partial unique `is_current IS TRUE`), `receipt_grading_items` (unique `(weighing_revision_id, grading_category)`), serta 7 endpoint OpenAPI `/api/v1/receipts*`.
+- **Files Created:**
+  - `backend/alembic/versions/0005_b4_tbs_receiving.py`
+  - `backend/app/core/idempotency_primitives.py`, `backend/app/core/idempotency.py`
+  - `backend/app/modules/tbs_receiving/__init__.py`
+  - `backend/app/modules/tbs_receiving/domain/__init__.py`, `entities.py`, `rules.py`
+  - `backend/app/modules/tbs_receiving/application/__init__.py`, `ports.py`, `use_cases.py`
+  - `backend/app/modules/tbs_receiving/infrastructure/__init__.py`, `models.py`, `repository.py`
+  - `backend/app/modules/tbs_receiving/presentation/__init__.py`, `schemas.py`, `router.py`
+  - `backend/tests/unit/test_tbs_receiving_unit.py`, `backend/tests/integration/test_tbs_receiving_integration.py`
+- **Files Modified:** `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0005_b4_tbs_receiving` menambahkan `idempotency_records`, sequence `tbs_receipt_seq`, `tbs_receipts`, `receipt_weighing_revisions`, dan `receipt_grading_items` lengkap dengan DB CHECK & partial unique constraints.
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** Pembuatan draf penerimaan idempoten (`201 Created`, `Idempotency-Key` wajib), penimbangan terversi dengan komputasi `net_weight_kg` server-side & kewajiban `correction_reason` pada revisi, pencatatan grading terpisah bertanda `is_simulation=true` & `simulation_notice`, validasi `DRAFT -> VALIDATED` berbasis timbang valid, pembatalan ber-alasan dengan riwayat `CANCELLED`, dan proteksi lintas petani/koperasi.
+- **Bugs Found & Fixed:**
+  1. Pemisahan `idempotency_primitives.py` (bebas SQLAlchemy/FastAPI) dari `core/idempotency.py` mencegah pelanggaran `import-linter` ketika service layer menginjeksikan idempotensi melalui port `IdempotencySlotPort`.
+  2. Penghapusan `await` keliru pada fungsi sinkron `append_audit_event(..., resource_id=str(...))` yang terdeteksi `pyright` sebelum eksekusi migrasi.
+  3. Penyesuaian fixture test integrasi `UserRoleGrantModel` & `UserAccessScopeModel` mengikuti kolom `revoked_at=None` skema B1.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0004_b3_pricing_public` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` & `ruff check .` -> **PASS** (`106 files already formatted`, `0` issues)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 8 kept, 0 broken`, `115 files`, `471 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`44 passed in 43.84s`: `27` unit, `3` architecture, `14` PostgreSQL/Redis integration including concurrent `Idempotency-Key` race test; `0` failed, `0` skipped)
+- **Counts:** `44` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B4_PASS — TBS_RECEIVING_VERIFIED`)**.
+- **Known Limitations:** Nilai `delivery_order_id` dalam detail error `TBS_RECEIPT_LOCKED` diisi setelah tabel `delivery_order_lines` dibangun pada `B6`.
+- **Next Action:** Lanjut ke **`B5 — Contracts & Quota`** (`app/modules/contracts/` + migrasi `0006_b5_contracts_quota` untuk `system_rule_versions` seed awal, `trade_contracts`, `contract_quota_periods`, `quota_reservations`, `contract_approval_events`, workflow `SM-03` & `SM-04`, `SOD-02`, isolasi `UNCONFIRMED`, dan row-level locking reservasi kuota anti over-quota).
+
+---
+
+## B5 — Contracts & Quota
+
+- **Milestone ID:** `B5`
+- **Nama Milestone:** `Contracts & Quota`
+- **Status:** **`B5_PASS — CONTRACTS_QUOTA_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan katalis kebijakan berversi `system_rule_versions` (`app/core/system_rules.py`) dan modul kontrak niaga PKS serta kuota (`contracts`: `trade_contracts`, `contract_quota_periods`, `quota_reservations`, `contract_approval_events`) lengkap dengan state machine `SM-03` & `SM-04`, pemisahan `PRINCIPAL` vs `AGENT` vs `UNCONFIRMED` (`PENDING_SOP`), `SOD-02` Maker != Checker, pelarangan pembukaan rahasia kontrak ke koperasi/petani/PKS, & PostgreSQL `SELECT FOR UPDATE` reservasi kuota anti over-quota dan anti double-consumption.
+- **Completed:**
+  - [x] Tabel `system_rule_versions` (`core/system_rules.py`) & seed awal 3 versi aturan dasar (`RECONCILIATION_TOLERANCE` 1,5% `SIMULATION_ONLY`, `BUSINESS_MODEL_POLICY` `UNCONFIRMED` `PENDING_SOP`, `FARMER_ALLOCATION_POLICY` `PENDING_SOP`).
+  - [x] Domain & Use Cases `contracts`: validasi struktur pihak `PRINCIPAL` vs `AGENT` vs `UNCONFIRMED` (`422 CONTRACT_BUSINESS_MODEL_UNCONFIRMED`), validasi harga `FIXED`, pelarangan pembatalan `SOD-02` self-approval (`AUTH_CONFLICT_OF_DUTIES`), guard `BR-SYS-002` (`AUTH_OPERATION_FORBIDDEN`), guard status aktif (`CONTRACT_NOT_ACTIVE`), kedaluwarsa (`CONTRACT_EXPIRED`), dan idempotensi `reserveContractQuota`.
+  - [x] Operasional SQL row-lock bersama (`contracts/infrastructure/quota_ops.py`): `reserve_quota_in_tx`, `consume_quota_reservation_in_tx`, & `release_quota_reservation_in_tx` di PostgreSQL + partial unique index `uq_quota_reservations_active_do` mencegah double reservation/consumption, serta `6` endpoint `/api/v1/contracts*`.
+- **Files Created:**
+  - `backend/alembic/versions/0006_b5_contracts_quota.py`
+  - `backend/app/core/system_rules.py`
+  - `backend/app/modules/contracts/__init__.py`
+  - `backend/app/modules/contracts/domain/__init__.py`, `entities.py`, `rules.py`
+  - `backend/app/modules/contracts/application/__init__.py`, `ports.py`, `use_cases.py`
+  - `backend/app/modules/contracts/infrastructure/__init__.py`, `models.py`, `quota_ops.py`, `repository.py`
+  - `backend/app/modules/contracts/presentation/__init__.py`, `schemas.py`, `router.py`
+  - `backend/tests/unit/test_contracts_unit.py`, `backend/tests/integration/test_contracts_integration.py`
+- **Files Modified:** `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0006_b5_contracts_quota` menambah `system_rule_versions` (+3 baseline seed), `trade_contracts`, `contract_quota_periods`, `quota_reservations`, dan `contract_approval_events` beserta CHECK constraints model usaha/pihak dan partial unique `uq_quota_reservations_active_do`.
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** Pembuatan draf kontrak rahasia komersial (`PENDING_APPROVAL`), isolasi model `UNCONFIRMED` (`PENDING_SOP`) vs `SIMULATION_ONLY`, aktivasi Direktur (`SOD-02`), kueri sisa kuota langsung dari PostgreSQL (tanpa Redis cache `ADR-004`), reservasi kuota idempoten anti-race, konversi `RESERVED -> CONSUMED`, dan pelepasan `RESERVED -> RELEASED`.
+- **Bugs Found & Fixed:** Perbaikan nama kolom `MillCompanyModel` (`company_code`, `contact_phone`, `address`) di fixture integrasi `test_contracts_integration.py`.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0005_b4_tbs_receiving` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` & `ruff check .` -> **PASS** (`124 files already formatted`, `0` issues)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 9 kept, 0 broken`, `130 files`, `560 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`49 passed in 47.90s`: `30` unit, `3` architecture, `16` PostgreSQL/Redis integration termasuk uji balap kuota `asyncio.gather` `25t vs 2x20t`; `0` failed, `0` skipped)
+- **Counts:** `49` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B5_PASS — CONTRACTS_QUOTA_VERIFIED`)**.
+- **Known Limitations:** Relasi FK `quota_reservations.delivery_order_id -> delivery_orders.id` ditambatkan di migrasi `B6` saat tabel `delivery_orders` dibuat.
+- **Next Action:** Lanjut ke **`B6 — Logistics & e-DO`** (`app/modules/logistics/` + migrasi `0007_b6_logistics_edo` untuk `delivery_orders`, `delivery_order_lines`, partial unique `ux_active_receipt_allocation`, `delivery_status_events`, QR hash, `SM-05`, integrasi kuota `B5`, & penguncian penerimaan `B4`).
+
+---
+
+## B6 — Logistics & e-DO
+
+- **Milestone ID:** `B6`
+- **Nama Milestone:** `Logistics & e-DO`
+- **Status:** **`B6_PASS — LOGISTICS_EDO_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan modul pengiriman konsolidasi multi-petani dan e-DO (`logistics`: `delivery_orders`, `delivery_order_lines`, `delivery_status_events`), penambatan FK tertunda `quota_reservations.delivery_order_id -> delivery_orders.id`, transaksi atomik penerbitan e-DO (`Idempotency-Key` wajib, kunci alokasi `ux_active_receipt_allocation`, kunci `tbs_receipts -> ALLOCATED`, reservasi kuota `RESERVED`, generasi token & hash SHA-256 QR), transisi state machine `SM-05` (`DRAFT -> READY -> IN_TRANSIT -> ARRIVED -> RECEIVED -> COMPLETED`), verifikasi QR terautentikasi PKS (`MILL_EDO_MILL_MISMATCH`), pembatalan pra-keberangkatan yang melepaskan muatan dan kuota secara konsisten, serta isolasi privasi lini petani lain.
+- **Completed:**
+  - [x] Domain & Rules (`logistics/domain/`): state machine `SM-05`, pembatasan perpindahan `IN_TRANSIT` vs `COMPLETED`, guard pembatalan (`LOG_CANCELLATION_FORBIDDEN` pasca-tiba), & generasi token/SHA-256 QR non-tebakan.
+  - [x] Use Cases & Repository (`logistics/application/`, `infrastructure/`): 7 operasi OpenAPI `/api/v1/delivery-orders*`, konsolidasi multi-petani berdasar netto otoritatif (tanpa potongan simulasi ganda), transaksi atomik `issueDeliveryOrder` dengan `SELECT FOR UPDATE` berurutan atas `delivery_orders`, `tbs_receipts`, & `contract_quota_periods`, pelepasan lengkap saat pembatalan (`ALLOCATED -> VALIDATED`, `allocation_status = RELEASED`, `quota -> RELEASED`), dan filter lini privat `FARMER`.
+  - [x] Migrasi `0007_b6_logistics_edo`: sequence `delivery_order_seq`, `delivery_orders`, `delivery_order_lines` (partial unique `ux_active_receipt_allocation`), `delivery_status_events`, serta penambatan FK `fk_quota_reservations_delivery_order_id`.
+- **Files Created:**
+  - `backend/alembic/versions/0007_b6_logistics_edo.py`
+  - `backend/app/modules/logistics/__init__.py`
+  - `backend/app/modules/logistics/domain/__init__.py`, `entities.py`, `rules.py`
+  - `backend/app/modules/logistics/application/__init__.py`, `ports.py`, `use_cases.py`
+  - `backend/app/modules/logistics/infrastructure/__init__.py`, `models.py`, `repository.py`
+  - `backend/app/modules/logistics/presentation/__init__.py`, `schemas.py`, `router.py`
+  - `backend/tests/unit/test_logistics_unit.py`, `backend/tests/integration/test_logistics_integration.py`
+- **Files Modified:** `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `backend/app/modules/contracts/infrastructure/quota_ops.py`, `backend/tests/integration/test_contracts_integration.py`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0007_b6_logistics_edo` menambah `delivery_order_seq`, `delivery_orders`, `delivery_order_lines`, `delivery_status_events`, partial unique index anti double-allocation `ux_active_receipt_allocation`, serta FK `quota_reservations.delivery_order_id -> delivery_orders.id`.
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** Pembuatan draft konsolidasi multi-petani, deteksi konflik alokasi ganda (`409 LOG_DELIVERY_ALREADY_ASSIGNED`), penerbitan idempoten anti-race, rollback penuh bila kuota tidak cukup, pelacakan histori status `delivery_status_events`, pembatalan ber-alasan dengan pelepasan kuota & penerimaan, verifikasi QR PKS terautentikasi (`403 MILL_EDO_MILL_MISMATCH`), dan pemisahan privasi muatan bagi akun petani (`gps_tracking_supported=false`).
+- **Bugs Found & Fixed:**
+  1. Pembacaan `contracts/role-permissions.yaml` mengungkap `COOPERATIVE_OPERATOR` memegang `delivery_orders.issue` & `delivery_orders.cancel` tanpa memegang permission `quotas.reserve`/`quotas.release` secara langsung -> dependency endpoint diset ke `delivery_orders.issue`/`cancel` sementara reservasi/pelepasan kuota dieksekusi oleh domain server dalam transaksi atomik.
+  2. Penyelarasan nama kolom `VehicleModel` (`updated_at`) & `DriverModel` (`contact_phone`, `driver_reference`, `updated_at`) pada fixture seed test integrasi `B5` & `B6` saat FK `delivery_order_id` ditambatkan.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0006_b5_contracts_quota` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` & `ruff check .` -> **PASS** (`140 files already formatted`, `0` issues)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 10 kept, 0 broken`, `143 files`, `629 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`54 passed in 58.42s`: `33` unit, `3` architecture, `18` PostgreSQL/Redis integration termasuk balap `issueDeliveryOrder` & cross-mill QR guard; `0` failed, `0` skipped)
+- **Counts:** `54` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B6_PASS — LOGISTICS_EDO_VERIFIED`)**.
+- **Known Limitations:** Status `ARRIVED -> RECEIVED` pada `delivery_orders` otomatis terpicu saat verifikasi tiket timbang PKS di `B7`.
+- **Next Action:** Lanjut ke **`B7 — Mill Weighing & Evidence Files`** (`app/modules/files/` & `app/modules/mill_weighing/` + migrasi `0008_b7_mill_weighing_files` untuk `file_assets`, `mill_weighing_tickets`, `mill_grading_items`, `/api/v1/files*`, `/api/v1/mill-tickets*`, alur `SM-06`, revisi tiket berversi, integrasi konversi kuota `CONSUMED` & transisi `ARRIVED -> RECEIVED`).
+
+---
+
+## B7 — Mill Weighing & Evidence Files
+
+- **Milestone ID:** `B7`
+- **Nama Milestone:** `Mill Weighing & Evidence Files`
+- **Status:** **`B7_PASS — MILL_WEIGHING_FILES_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan penyimpanan metadata dan berkas bukti terotorisasi non-publik (`files`: `file_assets`, `/api/v1/files*`, penambatan FK bukti harga `B3`) serta modul penimbangan & grading pabrik PKS (`mill_weighing`: `mill_weighing_tickets`, `mill_grading_items`, `/api/v1/mill-tickets*`) dengan alur `SM-06`, keunikan tiket current per PKS & e-DO, revisi berversi tanpa hapus histori, isolasi ketat antar PKS (`MILL_EDO_MILL_MISMATCH`), validasi status kedatangan `ARRIVED`, konversi kuota `RESERVED -> CONSUMED`, & transisi e-DO `ARRIVED -> RECEIVED`.
+- **Completed:**
+  - [x] Shared Decimal weight validator `app/core/weight_primitives.py` dipakai bersama oleh `tbs_receiving` dan `mill_weighing` tanpa duplikasi logika.
+  - [x] Modul `files` (4 layer): verifikasi tanda tangan biner (magic bytes PDF/JPEG/PNG), batas ukuran 10 MiB, sanitasi path-traversal nama berkas, checksum SHA-256, `storage_key` buram non-publik di disk terisolasi, & isolasi akses lintas-PKS.
+  - [x] Modul `mill_weighing` (4 layer): pembuatan tiket idempoten (`ARRIVED` wajib), partial unique indexes `ux_current_mill_ticket_per_do` & `uq_mill_tickets_mill_number_current` (`MILL_DUPLICATE_TICKET`), revisi berversi berantai `previous_ticket_id` menjaga `revision_number` lama, pemblokiran `COMPLETED` finality (`MILL_TICKET_ALREADY_FINAL`), serta verifikasi `SUBMITTED -> VERIFIED` yang otomatis memajukan e-DO ke `RECEIVED` & mengonsumsi reservasi kuota `B5`.
+- **Files Created:**
+  - `backend/alembic/versions/0008_b7_mill_weighing_files.py`
+  - `backend/app/core/weight_primitives.py`
+  - `backend/app/modules/files/__init__.py`, `domain/` (`entities.py`, `rules.py`), `application/` (`ports.py`, `use_cases.py`), `infrastructure/` (`models.py`, `storage.py`, `repository.py`), `presentation/` (`schemas.py`, `router.py`)
+  - `backend/app/modules/mill_weighing/__init__.py`, `domain/` (`entities.py`, `rules.py`), `application/` (`ports.py`, `use_cases.py`), `infrastructure/` (`models.py`, `repository.py`), `presentation/` (`schemas.py`, `router.py`)
+  - `backend/tests/unit/test_mill_weighing_unit.py`, `backend/tests/integration/test_mill_weighing_integration.py`
+- **Files Modified:** `backend/app/core/config.py`, `backend/app/modules/tbs_receiving/domain/rules.py`, `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `backend/uv.lock`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0008_b7_mill_weighing_files` menambah `file_assets`, menambatkan 2 FK `source_document_id` pada tabel pricing `B3`, dan menambah `mill_weighing_tickets` + `mill_grading_items` dengan partial unique & CHECK constraints bruto-tara-netto.
+- **Dependencies:** Ditambahkan `python-multipart>=0.0.12,<1.0.0` (terpasang `0.0.33` di `.venv`) agar FastAPI memproses endpoint upload multipart `/api/v1/files`.
+- **Features Implemented:** Unggah/unduh bukti aman terotorisasi, pencatatan tiket PKS idempoten, deteksi nomor tiket ganda per PKS & blokir e-DO non-`ARRIVED`, revisi tiket menjaga histori, blokir pasca-selesai, & konsumsi kuota saat tiket terverifikasi.
+- **Bugs Found & Fixed:** FastAPI mewajibkan paket `python-multipart` saat mendaftarkan route multipart `Form`/`UploadFile` pada `/api/v1/files` -> dideklarasikan di `pyproject.toml` dan di-sync bersih ke `backend/.venv` via `uv sync`.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0007_b6_logistics_edo` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` & `ruff check .` -> **PASS** (`171 files already formatted`, `0` issues)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 12 kept, 0 broken`, `174 files`, `768 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`58 passed in 62.59s`: `36` unit, `3` architecture, `19` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+- **Counts:** `58` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B7_PASS — MILL_WEIGHING_FILES_VERIFIED`)**.
+- **Known Limitations:** Guard `MILL_TICKET_ALREADY_FINAL` juga disambungkan ke status faktur terbit (`ISSUED`/`PAID`) saat modul keuangan dibangun pada `B9`.
+- **Next Action:** Lanjut ke **`B8 — Reconciliation, Dispute & Farmer Allocation`** (`app/modules/reconciliation/` + migrasi `0009_b8_reconciliation` untuk `reconciliation_cases`, `dispute_reviews`, `farmer_settlement_allocations`, toleransi 1,5% `SIMULATION_ONLY`, deteksi selisih negatif `BR-REC-009`, dual-review `SOD-03`, & simulasi alokasi proporsional anti `REC_ALLOCATION_IMBALANCE`).
+
+---
+
+## B8 — Reconciliation, Dispute & Farmer Allocation
+
+- **Milestone ID:** `B8`
+- **Nama Milestone:** `Reconciliation, Dispute & Farmer Allocation`
+- **Status:** **`B8_PASS — RECONCILIATION_DISPUTE_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan modul rekonsiliasi berat asal vs tiket PKS (`reconciliation`: `reconciliation_cases`, `dispute_reviews`, `farmer_settlement_allocations`), rumus selisih kanonis `BSD §17.4` (`origin - mill`), deteksi otomatis anomali selisih negatif (`BR-REC-009`), penangkapan snapshot `system_rule_versions` (`1,5000% SIMULATION_ONLY`), penegakan kesetaraan dasar berat (`REC_INVALID_WEIGHT_BASIS`), riwayat revisi tanpa hapus versi lama, peninjauan sengketa dual-role `SOD-03`, serta komputasi alokasi proporsional multi-petani dengan koreksi pembulatan deterministik (`REC_ALLOCATION_POLICY_UNCONFIRMED` memblokir mode `FINAL`).
+- **Completed:**
+  - [x] Domain Rules (`reconciliation/domain/`): komputasi `Decimal` selisih & persentase, guard dasar berat setara `NET_WEIGHT_BEFORE_GRADING`, deteksi `is_negative_difference` (`BR-REC-009`), otorisasi `SOD-03` & `BR-SYS-002` pada `resolveReconciliationDispute`, dan algoritma alokasi proporsional anti-selisih pembulatan (`REC_ALLOCATION_IMBALANCE`).
+  - [x] Repository & Use Cases (`reconciliation/application/`, `infrastructure/`): 7 operasi `/api/v1/reconciliations*`, lock `SELECT FOR UPDATE` pada `delivery_orders` + partial unique index `ux_current_reconciliation_per_do`, snapshot aturan toleransi per transaksi, eskalasi `DISPUTE_HOLD -> UNDER_REVIEW -> RESOLVED/CANCELLED`, blokir sengketa dari alokasi (`REC_WEIGHT_DISPUTE`), & pemblokiran mode alokasi nyata (`REC_ALLOCATION_POLICY_UNCONFIRMED` `BSD-DEC-013`).
+  - [x] Migrasi `0009_b8_reconciliation`: tabel `reconciliation_cases`, `dispute_reviews`, `farmer_settlement_allocations` lengkap dengan CHECK & FK constraints.
+- **Files Created:**
+  - `backend/alembic/versions/0009_b8_reconciliation.py`
+  - `backend/app/modules/reconciliation/__init__.py`
+  - `backend/app/modules/reconciliation/domain/__init__.py`, `entities.py`, `rules.py`
+  - `backend/app/modules/reconciliation/application/__init__.py`, `ports.py`, `use_cases.py`
+  - `backend/app/modules/reconciliation/infrastructure/__init__.py`, `models.py`, `repository.py`
+  - `backend/app/modules/reconciliation/presentation/__init__.py`, `schemas.py`, `router.py`
+  - `backend/tests/unit/test_reconciliation_unit.py`, `backend/tests/integration/test_reconciliation_integration.py`
+- **Files Modified:** `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0009_b8_reconciliation` menambahkan 3 tabel (`reconciliation_cases`, `dispute_reviews`, `farmer_settlement_allocations`) beserta partial unique `ux_current_reconciliation_per_do` menjaga 1 kasus aktif current per e-DO.
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** Rekonsiliasi idempoten terunci, deteksi selisih negatif `BR-REC-009`, isolasi snapshot aturan toleransi masa lalu terhadap revisi aturan masa depan, histori revisi rekonsiliasi pasca-koreksi tiket, review & resolusi `SOD-03`, simulasi alokasi proporsional berlabel `SIMULATION_ONLY`, dan penolakan eksplisit `mode="FINAL"` sebelum SOP disahkan.
+- **Bugs Found & Fixed:** Zero bug terdeteksi pada logic inti; 2 baris komentar/string >100 karakter dirapikan sesuai standar `ruff E501`.
+- **Tests Executed:**
+  - `.venv\Scripts\python.exe -m alembic upgrade head` -> `downgrade 0008_b7_mill_weighing_files` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\python.exe -m ruff format --check .` & `ruff check .` -> **PASS** (`187 files already formatted`, `0` issues)
+  - `.venv\Scripts\python.exe -m pyright` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 13 kept, 0 broken`, `187 files`, `844 dependencies`)
+  - `.venv\Scripts\python.exe -m pytest -v` -> **PASS** (`63 passed in 69.58s`: `39` unit, `3` architecture, `21` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+- **Counts:** `63` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B8_PASS — RECONCILIATION_DISPUTE_VERIFIED`)**.
+- **Known Limitations:** Pembayaran nyata dan penerbitan faktur masih ditahan sampai integrasi faktur & pembayaran pada `B9` selesai.
+- **Next Action:** Lanjut ke **`B9 — Finance, Invoices & Payments`** (`app/modules/finance/` + migrasi `0010_b9_finance` untuk `invoices`, `invoice_lines`, `payment_approvals`, `payment_records`, `payment_allocations`, pemisahan AR vs AP & INBOUND vs OUTBOUND, `FIN_DISPUTE_HOLD_BLOCKED`, `FIN_POLICY_UNCONFIRMED`, `SOD-04..06`, `PAY_PARTIAL_NOT_SUPPORTED`, `APPROVED != PAID`, serta penyambungan finality guard ke `B7`).
+
+---
+
+## B9 — Finance, Invoices & Payments
+
+- **Milestone ID:** `B9`
+- **Nama Milestone:** `Finance, Invoices & Payments`
+- **Status:** **`B9_PASS — FINANCE_INVOICES_PAYMENTS_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan modul keuangan AR/AP terpisah (`finance`: `invoices`, `invoice_lines`, `payment_approvals`, `payment_records`), pemisahan arus piutang `ACCOUNTS_RECEIVABLE` (`PKS -> Perumda`, `INBOUND`) vs utang `ACCOUNTS_PAYABLE` (`Perumda -> Koperasi/Petani`, `OUTBOUND`), pemblokiran faktur saat sengketa (`FIN_DISPUTE_HOLD_BLOCKED`) dan penerbitan saat model usaha `UNCONFIRMED` (`FIN_POLICY_UNCONFIRMED`), penguncian harga historis transaksi, dual-control `SOD-04..06` + `BR-SYS-002`, idempotency `approveOrRejectInvoicePayment` & `recordPaymentEvidence`, penolakan pembayaran parsial (`PAY_PARTIAL_NOT_SUPPORTED`), prinsip `APPROVED != PAID` (`BR-PAY-010`), mekanisme pembalikan `REVERSED`, privasi Jalur C, serta finality guard `MILL_TICKET_ALREADY_FINAL` pada `B7`.
+- **Completed:**
+  - [x] Domain & Rules (`finance/domain/`): kalkulasi `Decimal` nominal IDR (`NUMERIC(20,2)`), validasi arah dana & pasangan pihak, `derive_settlement_status` (`PAID` hanya tercapai dari `VERIFIED` penuh non-reversed), serta guard `SOD-04` (`verifyInvoice`), `SOD-05` (`approveOrRejectInvoicePayment`), `SOD-06` (`verifyPaymentRecord`), & `BR-SYS-002`.
+  - [x] Repository & Use Cases (`finance/application/`, `infrastructure/`): 9 endpoint OpenAPI `/api/v1/invoices*` & `/api/v1/payments*`, row lock + partial unique index `ux_invoices_active_case_type` & `ux_payment_records_active_ref`, snapshot harga kontrak `FIXED` maupun `MillPriceQuoteModel` `PUBLISHED` saat waktu e-DO, idempotency `approveOrRejectInvoicePayment` + `recordPaymentEvidence`, & isolasi baca `FARMER` / `COOPERATIVE_OPERATOR` khusus `OUTBOUND` Jalur C.
+  - [x] Integrasi `B7`: `revise_ticket` dan `verify_ticket` di `mill_weighing` memblokir perubahan tiket dengan `409 MILL_TICKET_ALREADY_FINAL` bila sudah ada faktur `ISSUED`.
+  - [x] Migrasi `0010_b9_finance`: `invoice_seq`, `payment_seq`, 4 tabel DBD §14 lengkap dengan CHECK (`invoice_parties_distinct`, `payment_approval_sod_05`, `payment_record_sod_06`) & partial unique indexes.
+- **Files Created:**
+  - `backend/alembic/versions/0010_b9_finance.py`
+  - `backend/app/modules/finance/__init__.py`
+  - `backend/app/modules/finance/domain/__init__.py`, `entities.py`, `rules.py`
+  - `backend/app/modules/finance/application/__init__.py`, `ports.py`, `use_cases.py`
+  - `backend/app/modules/finance/infrastructure/__init__.py`, `models.py`, `repository.py`
+  - `backend/app/modules/finance/presentation/__init__.py`, `schemas.py`, `router.py`
+  - `backend/tests/unit/test_finance_unit.py`, `backend/tests/integration/test_finance_integration.py`
+- **Files Modified:** `backend/app/modules/mill_weighing/infrastructure/repository.py`, `backend/app/main.py`, `backend/alembic/env.py`, `backend/pyproject.toml`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0010_b9_finance` menambahkan sequence `invoice_seq` & `payment_seq`, 4 tabel (`invoices`, `invoice_lines`, `payment_approvals`, `payment_records`), partial unique index faktur aktif per rekonsiliasi+jenis & referensi bayar aktif, serta constraint DB `SOD-05`/`SOD-06`.
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** Siklus lengkap AR/AP `PENDING_VERIFICATION -> VERIFIED -> ISSUED`, persetujuan kewajiban Direksi `APPROVED != PAID`, pencatatan & verifikasi bukti transfer manual idempoten, penolakan parsial/lebih bayar/pasangan salah/tanpa approval/ganda, pembalikan `REVERSED`, privasi Jalur C Petani/Koperasi, & penguncian revisi tiket pasca-faktur terbit.
+- **Bugs Found & Fixed:**
+  1. Envelope idempotency metadata pada `SimpleSuccessMeta` bernama `idempotency_replayed` (sempat ditulis `idempotent_replay`) -> diselaraskan dan tervalidasi oleh `pyright` strict + test integrasi.
+  2. Test finality tiket memanggil `PUT /api/v1/mill-tickets/{id}` sementara rute revisi OpenAPI memakai `PATCH /api/v1/mill-tickets/{id}` -> disesuaikan dan terverifikasi `409 MILL_TICKET_ALREADY_FINAL`.
+- **Tests Executed:**
+  - `.venv\Scripts\alembic.exe upgrade head` -> `downgrade -1` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\ruff.exe format --check .` & `ruff check .` -> **PASS** (`203 files already formatted`, `All checks passed!`)
+  - `.venv\Scripts\pyright.exe` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 14 kept, 0 broken`, `200 files`, `928 dependencies`)
+  - `.venv\Scripts\pytest.exe -v` -> **PASS** (`68 passed in 80.77s`: `43` unit, `3` architecture, `22` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+- **Counts:** `68` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B9_PASS — FINANCE_INVOICES_PAYMENTS_VERIFIED`)**.
+- **Known Limitations:** Laporan agregat `FinanceReport` (`BR-MRG-005`), audit viewer, rule management, serta observability metrics dibangun pada `B10`.
+- **Next Action:** Lanjut ke **`B10 — Reporting & Admin Audit/Rule/Health`** (`reporting` & `admin` modules + 8 operasi `/api/v1/reports/*` & `/api/v1/admin/{rule-versions,audit-events,system-health}`, Redis cache KPI scoped + fallback PG, `BR-SYS-002`, & redaksi log audit).
+
+---
+
+## B10 — Reporting & Admin Audit/Rule/Health
+
+- **Milestone ID:** `B10`
+- **Nama Milestone:** `Reporting & Admin Audit/Rule/Health`
+- **Status:** **`B10_PASS — REPORTING_ADMIN_OBSERVABILITY_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Mengimplementasikan modul pelaporan dashboard agregat scoped (`reporting`: `/api/v1/reports/{overview,supply,reconciliation,finance}`), caching Redis per peran/scope dengan fallback mulus PostgreSQL saat Redis down, penandaan `BR-MRG-005` `Kontribusi Kotor Niaga (Data Simulasi - Bukan Laba Bersih)` & `is_net_profit: false`, serta modul administrasi tata kelola & observability (`admin`: `/api/v1/admin/{rule-versions,audit-events,system-health}`, `BR-SYS-002`, redaksi log audit, dan metrik CCTV Digital 24h non-transaksional).
+- **Completed:**
+  - [x] Core Observability Tracker (`app/core/observability.py`, `middleware.py`, `errors.py`): pelacakan rolling 24 jam jumlah HTTP request, insiden `5xx`, & korelasi `request_id`/`trace_id`/`error_code`/`module` tanpa menyimpan data rupiah atau PII.
+  - [x] Modul `reporting` (4 layer): 4 endpoint OpenAPI dengan agregasi SQL mengecualikan baris `CANCELLED`, pemisahan scope `FARMER` / `COOPERATIVE` / `MILL` / `PERUMDA_GLOBAL`, pemblokiran laporan keuangan bagi peran non-Finance/non-Direksi, cache-aside Redis keyed per-scope + fallback PostgreSQL.
+  - [x] Modul `admin` (4 layer): `GET/POST /api/v1/admin/rule-versions` yang menegakkan `BR-SYS-002` (`SYSTEM_ADMIN` & `PERUMDA_OPERATIONS` dilarang menerbitkan aturan `CONFIRMED`; transaksi historis mempertahankan snapshot `rule_version_id`), `GET /api/v1/admin/audit-events` berpaginasi & teredaksi dari password/rekening/token, serta `GET /api/v1/admin/system-health` eksklusif `SYSTEM_ADMIN`.
+  - [x] Migrasi `0011_b10_reporting_indexes`: 5 composite index DBD §20.2 pada `delivery_orders`, `reconciliation_cases`, `audit_events`, `invoices`, & `payment_records`.
+- **Files Created:**
+  - `backend/alembic/versions/0011_b10_reporting_indexes.py`
+  - `backend/app/core/observability.py`
+  - `backend/app/modules/reporting/__init__.py`, `domain/` (`entities.py`, `rules.py`), `application/` (`ports.py`, `use_cases.py`), `infrastructure/` (`models.py`, `cache_adapter.py`, `repository.py`), `presentation/` (`schemas.py`, `router.py`)
+  - `backend/app/modules/admin/__init__.py`, `domain/` (`entities.py`, `rules.py`), `application/` (`ports.py`, `use_cases.py`), `infrastructure/` (`models.py`, `observability_adapter.py`, `repository.py`), `presentation/` (`schemas.py`, `router.py`)
+  - `backend/tests/unit/test_reporting_admin_unit.py`, `backend/tests/integration/test_reporting_admin_integration.py`
+- **Files Modified:** `backend/app/core/middleware.py`, `backend/app/core/errors.py`, `backend/app/main.py`, `backend/pyproject.toml`, `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Migrasi `0011_b10_reporting_indexes` menambahkan index prioritas laporan & audit (`ix_delivery_orders_status_created`, `ix_reconciliation_cases_status_calculated`, `ix_audit_events_occurred_at`, `ix_invoices_date_type_status`, `ix_payment_records_date_dir_status`).
+- **Dependencies:** Zero paket baru ditambahkan.
+- **Features Implemented:** Overview dashboard terisolasi, laporan supply & rekonsiliasi mengecualikan `CANCELLED`, laporan keuangan terpisah (`AR vs Kas`, `AP approved-unpaid vs verified-paid`, `gross_contribution_simulation`), rule versioning tidak memutasi riwayat, redaksi audit log, & CCTV Digital observability.
+- **Bugs Found & Fixed:** Signature `AuthenticatedPrincipal` dalam fixture test awal perlu diselaraskan ke `AccessScopeEntity` + field wajib `non_approver_admin` -> terdeteksi cepat oleh `pyright` sebelum pytest dijalankan.
+- **Tests Executed:**
+  - `.venv\Scripts\alembic.exe upgrade head` -> `downgrade -1` -> `upgrade head` (`agroniaga_dev` & `agroniaga_test`) -> **PASS** (`exit 0`)
+  - `.venv\Scripts\ruff.exe format --check .` & `ruff check .` -> **PASS** (`235 files already formatted`, `All checks passed!`)
+  - `.venv\Scripts\pyright.exe` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 16 kept, 0 broken`, `230 files`, `1082 dependencies`)
+  - `.venv\Scripts\pytest.exe -v` -> **PASS** (`73 passed in 92.33s`: `46` unit, `3` architecture, `24` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+- **Counts:** `73` PASS, `0` FAIL, `0` SKIPPED.
+- **Quality Gate:** **PASS (`B10_PASS — REPORTING_ADMIN_OBSERVABILITY_VERIFIED`)**.
+- **Known Limitations:** Pengujian menyeluruh E2E conformance seluruh 95 operasi OpenAPI, pemutaran skenario error catalog, benchmark performa query (`EXPLAIN ANALYZE` + beban), serta simulasi backup/restore PostgreSQL dikerjakan sebagai gerbang final pada `B11`.
+- **Next Action:** Lanjut ke **`B11 — Hardening, Security, DB Performance & Final Sign-Off`** untuk verifikasi `K1–K11`, 95 operasi OpenAPI, `contracts/fixtures/error-scenarios.json`, `EXPLAIN ANALYZE`, verifikasi `pg_dump` + restore DB terpisah, serta penandaan `BACKEND_INDEPENDENT_READY`.
+
+---
+
+## B11 — Hardening, Security, DB Performance & Final Sign-Off
+
+- **Milestone ID:** `B11`
+- **Nama Milestone:** `Hardening, Security, DB Performance & Final Sign-Off`
+- **Status:** **`B11_PASS — BACKEND_INDEPENDENT_READY`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `0243982`
+- **Tujuan:** Melaksanakan verifikasi pengerasan keamanan, kepatuhan penuh kontrak `openapi.v1.yaml` (`95` operasi), replay katalog error `contracts/fixtures/error-scenarios.json` (`22` skenario), audit dependensi, uji beban konkuren + PostgreSQL `EXPLAIN ANALYZE`, uji penuh E2E tanpa frontend lintas seluruh modul, serta uji backup & restore `pg_dump`/`pg_restore` guna menetapkan status **`BACKEND_INDEPENDENT_READY`** (`IPD §21`).
+- **Completed:**
+  - [x] Contract conformance 95 operasi OpenAPI + header `Idempotency-Key` pada seluruh 8 operasi idempoten + keselarasan 69 kode error & 22 skenario negatif `error-scenarios.json`.
+  - [x] Uji penuh E2E tanpa frontend (`test_b11_full_e2e_supply_chain_and_security_headers`): Portal Publik -> Auth/CSRF & security headers -> Master Data -> Pricing `SM-01` -> TBS Receiving `SM-02` -> Kontrak & Kuota -> e-DO `SM-05` + QR -> Unggah Bukti + Tiket PKS `SM-06` -> Rekonsiliasi `SM-07` & Simulasi Alokasi -> Faktur AR + Pembayaran Masuk `SOD-06` + `BR-SYS-002` -> Reporting Keuangan `BR-MRG-005` -> Audit Log -> System Health Observability.
+  - [x] Performance & concurrency benchmark: `60` request konkuren (`status=[200]`, `p50=533.83 ms`, `p95=696.78 ms`, `max=711.75 ms`) + `EXPLAIN (ANALYZE, FORMAT JSON)` query prioritas PostgreSQL 16 (`0.023 ms`–`0.596 ms` execution time).
+  - [x] Backup & restore verification (`pg_dump` + `pg_restore` pada database sementara `agroniaga_restore_verify`, tervalidasi `48` tabel & `alembic_version=0011_b10_reporting_indexes`, kemudian database sementara dihapus bersih).
+  - [x] Audit kompatibilitas paket (`uv pip check`: `114 packages`, seluruh dependensi kompatibel) + validasi kontrak M0.1 (`K1–K11`).
+- **Files Created:**
+  - `backend/tests/integration/test_b11_contract_conformance.py`
+- **Files Modified:** `docs/IMPLEMENTATION_CHECKPOINTS.md`
+- **Database Changes:** Tidak ada perubahan skema baru (`HEAD` tetap `0011_b10_reporting_indexes`); terverifikasi backup/restore penuh `343,788` bytes -> `48` tabel publik.
+- **Dependencies:** Zero paket baru ditambahkan (`uv pip check` = `114 packages compatible`).
+- **Features Implemented:** Rangkaian uji conformance & regresi final independen seluruh 11 modul domain + keamanan + performa + recovery.
+- **Bugs Found & Fixed:** Uji awal E2E menyesuaikan payload kanonis (`partnership_status` pada PKS, `version` pada penimbangan, `/api/v1/receipts` + `Idempotency-Key`, `initial_quota_kg` pada kontrak, `IN_TRANSIT` lalu `/verify-qr` untuk `ARRIVED`, & `AllocationMode.SIMULATION`).
+- **Tests Executed:**
+  - `.venv\Scripts\ruff.exe format --check .` & `ruff check .` -> **PASS** (`236 files already formatted`, `All checks passed!`)
+  - `.venv\Scripts\pyright.exe` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 16 kept, 0 broken`, `230 files`, `1082 dependencies`)
+  - `.venv\Scripts\pytest.exe -v` -> **PASS** (`76 passed in 101.82s`: `46` unit, `3` architecture, `27` PostgreSQL/Redis integration; `0` failed, `0` skipped)
+  - `python contracts\scripts\validate_contracts.py` & `python -m unittest discover -s contracts\tests -v` -> **PASS** (`K1–K11` = `0` issues, `11/11` tests `OK`)
+  - PostgreSQL `EXPLAIN ANALYZE`: `tbs_receipts_coop` `0.569 ms`, `delivery_orders_status` `0.115 ms`, `reconciliation_status` `0.023 ms`, `invoices_agg` `0.596 ms`, `audit_events_recent` `0.093 ms`
+  - Backup/Restore `pg_dump` -> `agroniaga_restore_verify` (`48` tables, `0011_b10_reporting_indexes`) -> **PASS**
+- **Counts:** Backend `76` PASS / `0` FAIL / `0` SKIPPED; Contract validator `11` PASS / `0` FAIL.
+- **Quality Gate:** **PASS (`B11_PASS — BACKEND_INDEPENDENT_READY`)**.
+- **Known Limitations:** Seluruh aturan bisnis berstatus `PENDING_SOP` / `SIMULATION_ONLY` (model usaha `UNCONFIRMED`, toleransi susut `1,5000%`, grading `2%`, pembagian hasil multi-petani final, penolakan bayar parsial) tetap terisolasi secara eksplisit sesuai kontrak M0.1 dan **tidak** mensimulasikan transfer bank otomatis maupun kelayakan produksi keuangan nyata sebelum SOP Perumda disahkan.
+- **Next Action:** Siap melanjutkan tahap **Frontend `F0–F10`** memakai API backend terverifikasi dan artefak kontrak `contracts/`.

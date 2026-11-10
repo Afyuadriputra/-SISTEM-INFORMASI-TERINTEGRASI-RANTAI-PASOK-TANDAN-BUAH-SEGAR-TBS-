@@ -838,11 +838,17 @@ def check_k9_backend_readiness(oa: dict[str, Any], ec: dict[str, Any], sc: dict[
 
 def check_k10_scope_hygiene() -> list[str]:
     issues: list[str] = []
-    forbidden_dirs = ("backend", "frontend", "alembic", "infra")
+    checkpoint_file = DOCS_DIR / "IMPLEMENTATION_CHECKPOINTS.md"
+    in_backend_track = (
+        checkpoint_file.exists()
+        and "# BACKEND DEVELOPMENT TRACK" in checkpoint_file.read_text(encoding="utf-8")
+    )
+    forbidden_dirs = ("frontend", "alembic") if in_backend_track else ("backend", "frontend", "alembic", "infra")
     for d in forbidden_dirs:
         p = REPO_ROOT / d
         if p.exists():
-            issues.append(f"K10 forbidden implementation directory exists during M0: {d}/")
+            phase = "Backend Track" if in_backend_track else "M0"
+            issues.append(f"K10 forbidden directory exists during {phase}: {d}/")
     return issues
 
 
