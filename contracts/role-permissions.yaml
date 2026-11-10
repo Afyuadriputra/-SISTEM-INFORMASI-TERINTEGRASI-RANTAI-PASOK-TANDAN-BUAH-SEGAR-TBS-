@@ -1,0 +1,537 @@
+# Canonical Role-Permission, Scope & Separation-of-Duties Matrix
+# Project: AgroNiaga TBS — Perumda Tuah Sekata
+# Authority: PRD V1.1 (§4), TRD V1.1 (§12), DBD V1.1 (§6), BSD V1.1 (§4-5)
+# Policy: Default-deny on server; frontend menu hiding never replaces server RBAC & scope checks (TRD §12.4).
+
+version: "1.0.0"
+contract_baseline: "M0-V1.1"
+authorization_default: "DENY_BY_DEFAULT"
+
+# =============================================================================
+# 1. CANONICAL ACTORS & ROLES
+# =============================================================================
+actors:
+  - role_code: PUBLIC
+    prd_code: ROLE-01
+    actor_type: anonymous
+    database_account: false
+    description: "Pengunjung masyarakat umum tanpa akun database dan tanpa login. Hanya mengakses informasi terkurasi Portal Publik (FR-PUB-001)."
+    default_scope: PUBLIC_NONE
+    allowed_scopes: [PUBLIC_NONE]
+
+roles:
+  - role_code: FARMER
+    prd_code: ROLE-02
+    name: "Petani Swadaya"
+    description: "Melihat profil kebun pribadi, riwayat panen, hasil penimbangan, dan status pembayaran miliknya secara read-only (BR-MD-004, FLOW-20)."
+    default_scope: FARMER
+    allowed_scopes: [FARMER]
+    ui_portal_base: "/app/petani"
+
+  - role_code: COOPERATIVE_OPERATOR
+    prd_code: ROLE-03
+    name: "Operator Koperasi"
+    description: "Mengelola data petani/kebun dalam cakupan koperasinya (FLOW-05), mencatat penerimaan TBS, penimbangan, grading, serta menyiapkan/menerbitkan e-DO (tergantung BSD-DEC-009)."
+    default_scope: COOPERATIVE
+    allowed_scopes: [COOPERATIVE]
+    ui_portal_base: "/app/koperasi"
+
+  - role_code: PERUMDA_OPERATIONS
+    prd_code: ROLE-04_OPS
+    name: "Staf Operasional Perumda"
+    description: "Mengelola master data PKS & publikasi (FLOW-06), input/verifikasi/publikasi harga multi-PKS, kontrak & kuota, penentuan PKS tujuan, monitoring e-DO, dan rekonsiliasi timbang."
+    default_scope: PERUMDA_GLOBAL
+    allowed_scopes: [PERUMDA_GLOBAL]
+    ui_portal_base: "/app/perumda"
+
+  - role_code: PERUMDA_FINANCE
+    prd_code: ROLE-04_FIN
+    name: "Staf Keuangan Perumda"
+    description: "Menyiapkan dan memeriksa faktur AR/AP terpisah, mengajukan persetujuan pembayaran, mencatat bukti pembayaran masuk/keluar, dan memverifikasi pelunasan sesuai SOP."
+    default_scope: PERUMDA_GLOBAL
+    allowed_scopes: [PERUMDA_GLOBAL]
+    ui_portal_base: "/app/perumda/pembayaran"
+
+  - role_code: MILL_OPERATOR
+    prd_code: ROLE-05
+    name: "Petugas PKS"
+    description: "Memverifikasi e-DO yang ditujukan khusus ke PKS miliknya, mencatat tiket timbang PKS, grading pabrik, dan revisi sebelum penguncian faktur."
+    default_scope: MILL
+    allowed_scopes: [MILL]
+    ui_portal_base: "/app/pks"
+
+  - role_code: DIRECTOR
+    prd_code: ROLE-06
+    name: "Direksi Perumda"
+    description: "Memantau dashboard eksekutif tonase/rekonsiliasi/keuangan, menyetujui kontrak, penyelesaian dispute bermasalah, dan persetujuan pembayaran sesuai batas kewenangan."
+    default_scope: PERUMDA_GLOBAL
+    allowed_scopes: [PERUMDA_GLOBAL]
+    ui_portal_base: "/app/direksi"
+
+  - role_code: SYSTEM_ADMIN
+    prd_code: ROLE-07
+    name: "Administrator Sistem"
+    description: "Mengelola akun, pemberian peran/scope, registrasi konfigurasi teknis, memantau log audit & CCTV Digital. DILARANG menjadi approver/verifikator transaksi bisnis atau keuangan (BR-SYS-002)."
+    default_scope: PERUMDA_GLOBAL
+    allowed_scopes: [PERUMDA_GLOBAL]
+    ui_portal_base: "/app/admin"
+    non_approver_enforcement: "BR-SYS-002"
+
+# =============================================================================
+# 2. RESOURCE SCOPES (DBD §6.6)
+# =============================================================================
+scopes:
+  - scope_type: PUBLIC_NONE
+    isolation_column: null
+    rule: "Hanya membaca endpoint /api/v1/public/* yang terverifikasi & diizinkan publik."
+  - scope_type: FARMER
+    isolation_column: farmer_id
+    rule: "Wajib menunjuk tepat satu farmer_id aktif pada user_access_scopes. Hanya dapat membaca data kebun, penerimaan, dan alokasi pembayaran petani tersebut."
+  - scope_type: COOPERATIVE
+    isolation_column: cooperative_id
+    rule: "Wajib menunjuk tepat satu cooperative_id pada user_access_scopes. Tidak dapat membaca atau memodifikasi petani, penerimaan, atau e-DO koperasi lain."
+  - scope_type: MILL
+    isolation_column: mill_id
+    rule: "Wajib menunjuk tepat satu mill_id pada user_access_scopes. Tidak dapat memverifikasi e-DO atau membuat/mengubah tiket milik PKS lain."
+  - scope_type: PERUMDA_GLOBAL
+    isolation_column: null
+    rule: "Akses lintas koperasi/PKS di tingkat Perumda sesuai batas permission peran masing-masing."
+
+# =============================================================================
+# 3. SEPARATION OF DUTIES & PUBLIC/PRIVATE BOUNDARIES
+# =============================================================================
+separation_of_duties:
+  - rule_id: SOD-01
+    subject: "Harga TBS Multi-PKS"
+    rule: "Penginput/pengaju (submitted_by) tidak boleh memverifikasi (verified_by) kutipan harga yang sama."
+    applies_to_operations: [verifyOrRejectPrice]
+    references: [BSD §4.2, AFD §10.5]
+  - rule_id: SOD-02
+    subject: "Kontrak Niaga"
+    rule: "Pembuat draf kontrak (created_by) tidak boleh menjadi penyetuju akhir aktivasi kontrak (approved_by)."
+    applies_to_operations: [approveContract]
+    references: [BSD §4.2, BSD BR-CON-003]
+  - rule_id: SOD-03
+    subject: "Penyelesaian Sengketa Rekonsiliasi"
+    rule: "Petugas pemeriksa yang mencatat review awal tidak boleh mengesahkan penyelesaian akhir sengketa seorang diri bila mekanisme dual review aktif."
+    applies_to_operations: [resolveReconciliationDispute]
+    references: [BSD §18.5, AFD §20.2]
+  - rule_id: SOD-04
+    subject: "Verifikasi Faktur"
+    rule: "Pembuat draf faktur tidak boleh memverifikasi faktur yang sama."
+    applies_to_operations: [verifyInvoice]
+    references: [BSD §4.2, BR-INV-001]
+  - rule_id: SOD-05
+    subject: "Persetujuan Pembayaran"
+    rule: "Staf keuangan yang mengajukan/mencatat kewajiban pembayaran tidak boleh bertindak sebagai approver pembayaran yang sama (Maker != Checker)."
+    applies_to_operations: [approveOrRejectInvoicePayment]
+    references: [BSD §4.2, BR-PAY-003]
+  - rule_id: SOD-06
+    subject: "Verifikasi Bukti Pembayaran"
+    rule: "Pencatat bukti bayar (recorded_by) dilarang memverifikasi keabsahan bukti pembayaran yang ia unggah sendiri."
+    applies_to_operations: [verifyPaymentRecord]
+    references: [BSD §22.3, BR-PAY-009]
+  - rule_id: BR-SYS-002
+    subject: "Larangan Privilege Approver bagi Administrator Teknis"
+    rule: "SYSTEM_ADMIN tidak pernah boleh memegang permission prices.verify, contracts.approve, reconciliations.resolve, invoices.verify, payments.approve, atau payments.verify secara otomatis maupun implisit."
+    applies_to_operations: [verifyOrRejectPrice, approveContract, resolveReconciliationDispute, verifyInvoice, approveOrRejectInvoicePayment, verifyPaymentRecord]
+    references: [AFD §27.3, D4/D5 BR-SYS-002]
+
+public_private_boundary:
+  rules:
+    - "Portal Publik (/api/v1/public/*) TIDAK PERNAH mewajibkan login dan TIDAK BOLEH mengembalikan NIK/identity_reference, nomor telepon pribadi petani, data transaksi penerimaan, detail kontrak niaga rahasia, margin Perumda, riwayat pembayaran, atau audit logs (BR-PUB-003)."
+    - "Daftar PKS publik hanya mengembalikan baris dengan mills.is_public == true (AFD §9.4)."
+    - "Harga publik hanya mengembalikan baris dengan mill_price_quotes.status == 'PUBLISHED' dan periode berlaku aktif (BR-PRC-006, BR-PUB-002); data harga Disbun dipisahkan secara eksplisit dari penawaran PKS (BR-CMP-001)."
+
+# =============================================================================
+# 4. PERMISSION DEFINITIONS (UNIQUE CODES)
+# =============================================================================
+permissions:
+  - { code: public.prices.read, module: public_portal, resource: public_prices, action: read, description: "Membaca harga TBS publik terverifikasi dan referensi Disbun." }
+  - { code: public.mills.read, module: public_portal, resource: public_mills, action: read, description: "Membaca direktori dan profil PKS publik yang diizinkan tampil." }
+  - { code: public.profile.read, module: public_portal, resource: public_profile, action: read, description: "Membaca profil Perumda Agro Niaga, kemitraan, dan pengumuman publik." }
+  - { code: auth.session.read, module: identity_access, resource: auth_session, action: read, description: "Membaca profil pengguna dan scope sesi saat ini." }
+  - { code: farmers.read, module: master_data, resource: farmers, action: read, description: "Membaca daftar dan detail petani sesuai scope." }
+  - { code: farmers.write, module: master_data, resource: farmers, action: write, description: "Membuat dan memperbarui/menonaktifkan data petani dalam scope." }
+  - { code: farms.read, module: master_data, resource: farms, action: read, description: "Membaca daftar kebun sesuai scope (koordinat privat dilindungi)." }
+  - { code: farms.write, module: master_data, resource: farms, action: write, description: "Membuat dan memperbarui data kebun dalam scope (FLOW-05)." }
+  - { code: cooperatives.read, module: master_data, resource: cooperatives, action: read, description: "Membaca data koperasi mitra sesuai scope." }
+  - { code: mills.read, module: master_data, resource: mills, action: read, description: "Membaca master data PKS internal." }
+  - { code: mills.write, module: master_data, resource: mills, action: write, description: "Membuat/memperbarui data perusahaan PKS, profil, koordinat, & is_public (FLOW-06)." }
+  - { code: vehicles.read, module: master_data, resource: vehicles, action: read, description: "Membaca data armada angkutan." }
+  - { code: vehicles.write, module: master_data, resource: vehicles, action: write, description: "Menambah data kendaraan angkutan." }
+  - { code: drivers.read, module: master_data, resource: drivers, action: read, description: "Membaca daftar sopir operasional." }
+  - { code: drivers.write, module: master_data, resource: drivers, action: write, description: "Menambah data sopir operasional." }
+  - { code: prices.read, module: pricing, resource: mill_price_quotes, action: read, description: "Membaca daftar internal, draft, dan riwayat harga multi-PKS." }
+  - { code: prices.create, module: pricing, resource: mill_price_quotes, action: create, description: "Membuat dan mengedit draft harga PKS maupun input referensi Disbun." }
+  - { code: prices.submit, module: pricing, resource: mill_price_quotes, action: submit, description: "Mengajukan draft harga untuk verifikasi checker." }
+  - { code: prices.verify, module: pricing, resource: mill_price_quotes, action: verify, description: "Menyetujui atau menolak pengajuan harga (Maker != Checker)." }
+  - { code: prices.publish, module: pricing, resource: mill_price_quotes, action: publish, description: "Memublikasikan harga terverifikasi ke Portal Publik." }
+  - { code: prices.revoke, module: pricing, resource: mill_price_quotes, action: revoke, description: "Mencabut publikasi harga aktif dengan alasan audit." }
+  - { code: receipts.read, module: tbs_receiving, resource: tbs_receipts, action: read, description: "Membaca penerimaan, timbangan, dan grading sesuai scope." }
+  - { code: receipts.create, module: tbs_receiving, resource: tbs_receipts, action: create, description: "Mencatat penerimaan TBS baru dari petani di koperasi." }
+  - { code: receipts.weigh, module: tbs_receiving, resource: tbs_receipts, action: weigh, description: "Mencatat bruto, tara, grading, dan revisi penimbangan koperasi." }
+  - { code: receipts.validate, module: tbs_receiving, resource: tbs_receipts, action: validate, description: "Mengesahkan penerimaan menjadi VALIDATED siap alokasi." }
+  - { code: receipts.cancel, module: tbs_receiving, resource: tbs_receipts, action: cancel, description: "Membatalkan draft atau penerimaan pra-alokasi." }
+  - { code: contracts.read, module: contracts, resource: trade_contracts, action: read, description: "Membaca kontrak niaga rahasia & status kuota pasokan." }
+  - { code: contracts.write, module: contracts, resource: trade_contracts, action: write, description: "Membuat draf kontrak niaga PKS dan periode kuota." }
+  - { code: contracts.approve, module: contracts, resource: trade_contracts, action: approve, description: "Mengaktifkan kontrak niaga setelah pemeriksaan otorisasi." }
+  - { code: quotas.reserve, module: contracts, resource: quota_reservations, action: reserve, description: "Mereservasi kuota periode kontrak secara atomik." }
+  - { code: quotas.consume, module: contracts, resource: quota_reservations, action: consume, description: "Mengonversi reservasi kuota menjadi pemakaian terkonfirmasi." }
+  - { code: quotas.release, module: contracts, resource: quota_reservations, action: release, description: "Melepaskan reservasi kuota pada pembatalan yang sah." }
+  - { code: delivery_orders.read, module: logistics, resource: delivery_orders, action: read, description: "Membaca daftar dan detail e-DO serta muatannya sesuai scope." }
+  - { code: delivery_orders.create, module: logistics, resource: delivery_orders, action: create, description: "Menyiapkan draf e-DO konsolidasi multi-petani." }
+  - { code: delivery_orders.issue, module: logistics, resource: delivery_orders, action: issue, description: "Menerbitkan e-DO, mengunci muatan & mereservasi kuota (SOP BSD-DEC-009)." }
+  - { code: delivery_orders.transition, module: logistics, resource: delivery_orders, action: transition, description: "Memindahkan status pengiriman sesuai tahap pengiriman yang sah." }
+  - { code: delivery_orders.cancel, module: logistics, resource: delivery_orders, action: cancel, description: "Membatalkan e-DO sebelum penerimaan PKS sesuai SOP." }
+  - { code: delivery_orders.verify_arrival, module: logistics, resource: delivery_orders, action: verify_arrival, description: "Memverifikasi QR/nomor e-DO truk yang tiba di PKS tujuan." }
+  - { code: mill_tickets.read, module: mill_weighing, resource: mill_weighing_tickets, action: read, description: "Membaca tiket timbang dan grading PKS sesuai scope." }
+  - { code: mill_tickets.create, module: mill_weighing, resource: mill_weighing_tickets, action: create, description: "Mencatat dan merevisi tiket timbang & grading PKS." }
+  - { code: mill_tickets.verify, module: mill_weighing, resource: mill_weighing_tickets, action: verify, description: "Memverifikasi tiket timbang PKS untuk diproses ke rekonsiliasi." }
+  - { code: reconciliations.read, module: reconciliation, resource: reconciliation_cases, action: read, description: "Membaca kasus rekonsiliasi, selisih, dan riwayat dispute." }
+  - { code: reconciliations.calculate, module: reconciliation, resource: reconciliation_cases, action: calculate, description: "Menghitung selisih timbang dan menetapkan MATCHED vs DISPUTE_HOLD." }
+  - { code: reconciliations.review, module: reconciliation, resource: dispute_reviews, action: review, description: "Mengajukan hasil klarifikasi dan bukti pemeriksaan sengketa." }
+  - { code: reconciliations.resolve, module: reconciliation, resource: dispute_reviews, action: resolve, description: "Mengesahkan penyelesaian akhir sengketa (Maker != Checker)." }
+  - { code: allocations.compute, module: reconciliation, resource: farmer_settlement_allocations, action: compute, description: "Menghitung alokasi proporsional multi-petani (mode simulasi hingga SOP disahkan)." }
+  - { code: invoices.read, module: reconciliation, resource: invoices, action: read, description: "Membaca daftar dan rincian faktur AR/AP." }
+  - { code: invoices.create, module: reconciliation, resource: invoices, action: create, description: "Membuat draf faktur dari rekonsiliasi MATCHED/RESOLVED." }
+  - { code: invoices.verify, module: reconciliation, resource: invoices, action: verify, description: "Memverifikasi draf faktur (Maker != Checker)." }
+  - { code: invoices.issue, module: reconciliation, resource: invoices, action: issue, description: "Menerbitkan faktur resmi apabila model usaha terkonfirmasi." }
+  - { code: payments.read, module: reconciliation, resource: payment_records, action: read, description: "Membaca status persetujuan dan bukti pembayaran sesuai hak akses jalur." }
+  - { code: payments.approve, module: reconciliation, resource: payment_approvals, action: approve, description: "Memberi persetujuan otorisasi kewajiban pembayaran (bukan status PAID)." }
+  - { code: payments.record, module: reconciliation, resource: payment_records, action: record, description: "Mencatat referensi dan bukti pembayaran masuk/keluar." }
+  - { code: payments.verify, module: reconciliation, resource: payment_records, action: verify, description: "Memverifikasi keabsahan bukti bayar atau mencatat reversal (Maker != Checker)." }
+  - { code: files.upload, module: core, resource: file_assets, action: upload, description: "Mengunggah metadata/berkas bukti harga, tiket PKS, dispute, atau transfer." }
+  - { code: files.read, module: core, resource: file_assets, action: read, description: "Mengunduh/membaca berkas bukti sesuai cakupan otorisasi." }
+  - { code: reports.operational.read, module: reporting, resource: reports, action: read_operational, description: "Membaca dashboard dan laporan pasokan/rekonsiliasi sesuai scope peran." }
+  - { code: reports.finance.read, module: reporting, resource: finance_reports, action: read_finance, description: "Membaca laporan keuangan, piutang, kewajiban, dan kontribusi kotor simulasi." }
+  - { code: admin.users.read, module: identity_access, resource: user_accounts, action: read, description: "Membaca daftar pengguna, role grants, dan scope akses." }
+  - { code: admin.users.write, module: identity_access, resource: user_accounts, action: write, description: "Membuat pengguna dan mengatur role/scope (tanpa memberi approval implisit pada admin)." }
+  - { code: admin.rules.read, module: audit, resource: system_rule_versions, action: read, description: "Membaca versi aturan toleransi, grading, dan kebijakan simulasi." }
+  - { code: admin.rules.write, module: audit, resource: system_rule_versions, action: write, description: "Mendaftarkan versi konfigurasi aturan baru terversi tanpa mengubah histori." }
+  - { code: admin.audit.read, module: audit, resource: audit_events, action: read, description: "Membaca jejak audit bisnis teredaksi dan ringkasan investigasi Request ID." }
+  - { code: admin.health.read, module: audit, resource: system_health, action: read, description: "Membaca ringkasan CCTV Digital teknis, 5xx logs, dan status Postgres/Redis." }
+
+# =============================================================================
+# 5. ROLE-TO-PERMISSION GRANTS
+# =============================================================================
+role_grants:
+  PUBLIC:
+    permissions:
+      - public.prices.read
+      - public.mills.read
+      - public.profile.read
+
+  FARMER:
+    permissions:
+      - public.prices.read
+      - public.mills.read
+      - public.profile.read
+      - auth.session.read
+      - farmers.read
+      - farms.read
+      - prices.read
+      - receipts.read
+      - delivery_orders.read
+      - payments.read
+      - reports.operational.read
+    forbidden_explicit:
+      - "Dilarang mengubah berat timbangan atau mengesahkan penerimaan/pembayaran (BR-MD-004)."
+
+  COOPERATIVE_OPERATOR:
+    permissions:
+      - public.prices.read
+      - public.mills.read
+      - public.profile.read
+      - auth.session.read
+      - farmers.read
+      - farmers.write
+      - farms.read
+      - farms.write
+      - cooperatives.read
+      - mills.read
+      - vehicles.read
+      - vehicles.write
+      - drivers.read
+      - drivers.write
+      - prices.read
+      - receipts.read
+      - receipts.create
+      - receipts.weigh
+      - receipts.validate
+      - receipts.cancel
+      - delivery_orders.read
+      - delivery_orders.create
+      - delivery_orders.issue
+      - delivery_orders.transition
+      - delivery_orders.cancel
+      - mill_tickets.read
+      - reconciliations.read
+      - payments.read
+      - reports.operational.read
+    forbidden_explicit:
+      - "Dilarang mengakses data petani/penerimaan koperasi lain dan dilarang mengotorisasi pencairan dana Perumda (PRD §4.4)."
+
+  PERUMDA_OPERATIONS:
+    permissions:
+      - public.prices.read
+      - public.mills.read
+      - public.profile.read
+      - auth.session.read
+      - farmers.read
+      - farmers.write
+      - farms.read
+      - farms.write
+      - cooperatives.read
+      - mills.read
+      - mills.write
+      - vehicles.read
+      - vehicles.write
+      - drivers.read
+      - drivers.write
+      - prices.read
+      - prices.create
+      - prices.submit
+      - prices.verify
+      - prices.publish
+      - prices.revoke
+      - receipts.read
+      - contracts.read
+      - contracts.write
+      - quotas.reserve
+      - quotas.consume
+      - quotas.release
+      - delivery_orders.read
+      - delivery_orders.create
+      - delivery_orders.issue
+      - delivery_orders.transition
+      - delivery_orders.cancel
+      - mill_tickets.read
+      - reconciliations.read
+      - reconciliations.calculate
+      - reconciliations.review
+      - reconciliations.resolve
+      - allocations.compute
+      - invoices.read
+      - files.upload
+      - files.read
+      - admin.rules.read
+      - admin.rules.write
+      - reports.operational.read
+
+  PERUMDA_FINANCE:
+    permissions:
+      - public.prices.read
+      - public.mills.read
+      - public.profile.read
+      - auth.session.read
+      - cooperatives.read
+      - mills.read
+      - prices.read
+      - receipts.read
+      - contracts.read
+      - delivery_orders.read
+      - mill_tickets.read
+      - reconciliations.read
+      - allocations.compute
+      - invoices.read
+      - invoices.create
+      - invoices.verify
+      - invoices.issue
+      - payments.read
+      - payments.record
+      - payments.verify
+      - files.upload
+      - files.read
+      - reports.operational.read
+      - reports.finance.read
+    forbidden_explicit:
+      - "Tidak memverifikasi tiket timbang PKS atau menyetujui pembayaran sendiri tanpa Maker != Checker."
+
+  MILL_OPERATOR:
+    permissions:
+      - public.prices.read
+      - public.mills.read
+      - public.profile.read
+      - auth.session.read
+      - mills.read
+      - vehicles.read
+      - delivery_orders.read
+      - delivery_orders.verify_arrival
+      - mill_tickets.read
+      - mill_tickets.create
+      - mill_tickets.verify
+      - files.upload
+      - files.read
+      - reports.operational.read
+    forbidden_explicit:
+      - "Dilarang membuka/mengubah e-DO atau tiket PKS selain mill_id cakupannya (PRD §4.6)."
+
+  DIRECTOR:
+    permissions:
+      - public.prices.read
+      - public.mills.read
+      - public.profile.read
+      - auth.session.read
+      - farmers.read
+      - farms.read
+      - cooperatives.read
+      - mills.read
+      - prices.read
+      - prices.verify
+      - receipts.read
+      - contracts.read
+      - contracts.approve
+      - delivery_orders.read
+      - mill_tickets.read
+      - reconciliations.read
+      - reconciliations.resolve
+      - invoices.read
+      - invoices.verify
+      - payments.read
+      - payments.approve
+      - files.read
+      - admin.rules.read
+      - admin.rules.write
+      - admin.audit.read
+      - reports.operational.read
+      - reports.finance.read
+
+  SYSTEM_ADMIN:
+    permissions:
+      - auth.session.read
+      - admin.users.read
+      - admin.users.write
+      - admin.rules.read
+      - admin.rules.write
+      - admin.audit.read
+      - admin.health.read
+    forbidden_explicit:
+      - "BR-SYS-002: DILARANG keras menjadi approver/verifikator transaksi niaga, harga, dispute, faktur, maupun pembayaran."
+
+# =============================================================================
+# 6. COMPLETE ENDPOINT AUTHORIZATION MATRIX (1:1 WITH openapi.v1.yaml)
+# =============================================================================
+operation_access_matrix:
+  # --- Infrastructure Probes ---
+  - { operationId: getLivenessHealth, method: GET, path: "/health/live", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [], scope_type: PUBLIC_NONE, scope_rule: "Health probe tanpa data bisnis.", maker_checker_rule: null, public_private_boundary: "Hanya status proses.", pending_sop_ref: null }
+  - { operationId: getReadinessHealth, method: GET, path: "/health/ready", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [], scope_type: PUBLIC_NONE, scope_rule: "Memeriksa status kesiapan PostgreSQL & Redis tanpa credential.", maker_checker_rule: null, public_private_boundary: "Dilarang mengekspos DSN/secret.", pending_sop_ref: null }
+
+  # --- Public Portal ---
+  - { operationId: listPublicPrices, method: GET, path: "/api/v1/public/prices", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [public.prices.read], scope_type: PUBLIC_NONE, scope_rule: "Hanya harga PUBLISHED dan mills.is_public=true.", maker_checker_rule: null, public_private_boundary: "Tidak menyertakan harga kontrak rahasia maupun data petani.", pending_sop_ref: null }
+  - { operationId: getPublicPriceDetail, method: GET, path: "/api/v1/public/prices/{price_quote_id}", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [public.prices.read], scope_type: PUBLIC_NONE, scope_rule: "Hanya kutipan harga PUBLISHED/EXPIRED untuk PKS publik.", maker_checker_rule: null, public_private_boundary: "DRAFT/REJECTED mengembalikan 404 tanpa membocorkan eksistensi.", pending_sop_ref: null }
+  - { operationId: listPublicDisbunPrices, method: GET, path: "/api/v1/public/disbun-prices", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [public.prices.read], scope_type: PUBLIC_NONE, scope_rule: "Harga acuan resmi Disbun terpisah dari PKS.", maker_checker_rule: null, public_private_boundary: "Publik resmi.", pending_sop_ref: null }
+  - { operationId: listPublicMills, method: GET, path: "/api/v1/public/mills", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [public.mills.read], scope_type: PUBLIC_NONE, scope_rule: "Hanya PKS dengan is_public=true.", maker_checker_rule: null, public_private_boundary: "Koordinat belum terverifikasi dikirim null; kontrak & kuota dihilangkan.", pending_sop_ref: null }
+  - { operationId: getPublicMillDetail, method: GET, path: "/api/v1/public/mills/{mill_id}", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [public.mills.read], scope_type: PUBLIC_NONE, scope_rule: "Hanya PKS dengan is_public=true.", maker_checker_rule: null, public_private_boundary: "Tanpa kontrak privat/kuota/kontak internal.", pending_sop_ref: null }
+  - { operationId: getPublicProfile, method: GET, path: "/api/v1/public/profile", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [public.profile.read], scope_type: PUBLIC_NONE, scope_rule: "Halaman Tentang Agro Niaga, Kemitraan, Kontak Resmi, Kantor is_public.", maker_checker_rule: null, public_private_boundary: "Menegaskan eksklusi Unit Listrik & Gas.", pending_sop_ref: null }
+  - { operationId: listPublicNotices, method: GET, path: "/api/v1/public/notices", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [public.profile.read], scope_type: PUBLIC_NONE, scope_rule: "Hanya notice PUBLISHED dalam masa tayang.", maker_checker_rule: null, public_private_boundary: "Sanitasi XSS konten.", pending_sop_ref: null }
+
+  # --- Authentication & Session ---
+  - { operationId: getCsrfToken, method: GET, path: "/api/v1/auth/csrf", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC, FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [], scope_type: PUBLIC_NONE, scope_rule: "Mengeluarkan CSRF token untuk binding sesi.", maker_checker_rule: null, public_private_boundary: "Tidak menyertakan token sesi mentah di JSON body.", pending_sop_ref: null }
+  - { operationId: loginUser, method: POST, path: "/api/v1/auth/login", auth_required: false, csrf_required: false, idempotency_required: false, allowed_roles: [PUBLIC], required_permissions: [], scope_type: PUBLIC_NONE, scope_rule: "Membuat sesi server-side dan cookie HttpOnly; rotasi session ID setelah login.", maker_checker_rule: null, public_private_boundary: "Gagal mengembalikan AUTH_INVALID_CREDENTIALS 401 generik.", pending_sop_ref: null }
+  - { operationId: logoutUser, method: POST, path: "/api/v1/auth/logout", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [auth.session.read], scope_type: PUBLIC_NONE, scope_rule: "Mencabut auth_sessions milik sesi aktif & menghapus cookie.", maker_checker_rule: null, public_private_boundary: "Internal session revocation.", pending_sop_ref: null }
+  - { operationId: getCurrentUser, method: GET, path: "/api/v1/auth/me", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR, SYSTEM_ADMIN], required_permissions: [auth.session.read], scope_type: PUBLIC_NONE, scope_rule: "Mengembalikan profil akun, peran, dan daftar access_scopes milik sesi.", maker_checker_rule: null, public_private_boundary: "Dilarang mengembalikan password_hash atau raw session_token.", pending_sop_ref: null }
+
+  # --- Master Data (FLOW-05 & FLOW-06) ---
+  - { operationId: listFarmers, method: GET, path: "/api/v1/farmers", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, DIRECTOR], required_permissions: [farmers.read], scope_type: COOPERATIVE, scope_rule: "FARMER: hanya farmer_id miliknya; COOPERATIVE_OPERATOR: anggota koperasinya saja; PERUMDA_OPERATIONS/DIRECTOR: global.", maker_checker_rule: null, public_private_boundary: "Data privat petani; tidak tampil di portal publik.", pending_sop_ref: null }
+  - { operationId: createFarmer, method: POST, path: "/api/v1/farmers", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [farmers.write], scope_type: COOPERATIVE, scope_rule: "COOPERATIVE_OPERATOR wajib mengaitkan cooperative_id ke scope miliknya.", maker_checker_rule: null, public_private_boundary: "FLOW-05 privat.", pending_sop_ref: null }
+  - { operationId: getFarmer, method: GET, path: "/api/v1/farmers/{farmer_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, DIRECTOR], required_permissions: [farmers.read], scope_type: FARMER, scope_rule: "Tolak 403 AUTH_SCOPE_FORBIDDEN jika farmer_id di luar scope petani/koperasi.", maker_checker_rule: null, public_private_boundary: "Data privat petani.", pending_sop_ref: null }
+  - { operationId: updateFarmer, method: PATCH, path: "/api/v1/farmers/{farmer_id}", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [farmers.write], scope_type: COOPERATIVE, scope_rule: "Validasi scope koperasi & optimistic version lock; soft deactivation menjaga histori (BR-MD-003).", maker_checker_rule: null, public_private_boundary: "FLOW-05 privat.", pending_sop_ref: null }
+  - { operationId: listFarms, method: GET, path: "/api/v1/farms", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, DIRECTOR], required_permissions: [farms.read], scope_type: FARMER, scope_rule: "Difilter otomatis oleh farmer_id (FARMER) atau keanggotaan koperasi (COOPERATIVE_OPERATOR).", maker_checker_rule: null, public_private_boundary: "Koordinat kebun bersifat internal (BR-MD-008).", pending_sop_ref: null }
+  - { operationId: createFarm, method: POST, path: "/api/v1/farms", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [farms.write], scope_type: COOPERATIVE, scope_rule: "Petani pemilik kebun wajib berada di koperasi cakupan operator.", maker_checker_rule: null, public_private_boundary: "BR-MD-008 privat.", pending_sop_ref: null }
+  - { operationId: updateFarm, method: PATCH, path: "/api/v1/farms/{farm_id}", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [farms.write], scope_type: COOPERATIVE, scope_rule: "Validasi koperasi pemilik petani + version lock + koordinat berpasangan.", maker_checker_rule: null, public_private_boundary: "BR-MD-008 privat.", pending_sop_ref: null }
+  - { operationId: listCooperatives, method: GET, path: "/api/v1/cooperatives", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [cooperatives.read], scope_type: COOPERATIVE, scope_rule: "COOPERATIVE_OPERATOR hanya membaca koperasinya; Perumda/Direksi global.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: listMillCompanies, method: GET, path: "/api/v1/mill-companies", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, DIRECTOR], required_permissions: [mills.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Global Perumda & Direksi.", maker_checker_rule: null, public_private_boundary: "FLOW-06 internal.", pending_sop_ref: null }
+  - { operationId: createMillCompany, method: POST, path: "/api/v1/mill-companies", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [mills.write], scope_type: PERUMDA_GLOBAL, scope_rule: "Hanya Staf Operasional Perumda.", maker_checker_rule: null, public_private_boundary: "FLOW-06 internal.", pending_sop_ref: null }
+  - { operationId: listMills, method: GET, path: "/api/v1/mills", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [mills.read], scope_type: MILL, scope_rule: "MILL_OPERATOR dibatasi ke mill_id miliknya; Perumda/Direksi/Koperasi melihat daftar mitra internal aktif.", maker_checker_rule: null, public_private_boundary: "Membedakan kemitraan internal vs is_public.", pending_sop_ref: null }
+  - { operationId: createMill, method: POST, path: "/api/v1/mills", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [mills.write], scope_type: PERUMDA_GLOBAL, scope_rule: "Invalidasi Redis public:mills:v1:* setelah commit bila is_public=true.", maker_checker_rule: null, public_private_boundary: "AFD §9.4.", pending_sop_ref: null }
+  - { operationId: getMill, method: GET, path: "/api/v1/mills/{mill_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [mills.read], scope_type: MILL, scope_rule: "MILL_OPERATOR dibatasi mill_id miliknya.", maker_checker_rule: null, public_private_boundary: "Internal detail PKS.", pending_sop_ref: null }
+  - { operationId: updateMill, method: PATCH, path: "/api/v1/mills/{mill_id}", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [mills.write], scope_type: PERUMDA_GLOBAL, scope_rule: "Version lock + invalidasi cache direktori publik pasca-commit.", maker_checker_rule: null, public_private_boundary: "FLOW-06; menjaga BR-PUB-003 saat is_public=true.", pending_sop_ref: null }
+  - { operationId: listVehicles, method: GET, path: "/api/v1/vehicles", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, MILL_OPERATOR], required_permissions: [vehicles.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Daftar armada referensi pengiriman.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: createVehicle, method: POST, path: "/api/v1/vehicles", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [vehicles.write], scope_type: COOPERATIVE, scope_rule: "Validasi plat nomor unik.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: listDrivers, method: GET, path: "/api/v1/drivers", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [drivers.read], scope_type: COOPERATIVE, scope_rule: "Kontak sopir hanya untuk operasional pengiriman.", maker_checker_rule: null, public_private_boundary: "Data kontak privat.", pending_sop_ref: null }
+  - { operationId: createDriver, method: POST, path: "/api/v1/drivers", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [drivers.write], scope_type: COOPERATIVE, scope_rule: "Pencatatan sopir pengiriman.", maker_checker_rule: null, public_private_boundary: "Privat.", pending_sop_ref: null }
+
+  # --- Pricing (FLOW-07) ---
+  - { operationId: getPricingMetadata, method: GET, path: "/api/v1/prices/reference-meta", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [prices.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Data referensi price_sources dan price_categories.", maker_checker_rule: null, public_private_boundary: "Referensi non-sensitif.", pending_sop_ref: null }
+  - { operationId: listInternalPrices, method: GET, path: "/api/v1/prices", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [prices.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Petani & Koperasi hanya melihat harga terverifikasi/published; Perumda & Direksi melihat DRAFT/PENDING_VERIFICATION/REJECTED/REVOKED.", maker_checker_rule: null, public_private_boundary: "DRAFT tidak tampil ke publik.", pending_sop_ref: null }
+  - { operationId: createPriceDraft, method: POST, path: "/api/v1/prices", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [prices.create], scope_type: PERUMDA_GLOBAL, scope_rule: "Selalu tercipta berstatus DRAFT.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: getInternalPrice, method: GET, path: "/api/v1/prices/{price_quote_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [prices.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Petani/Koperasi dilarang membaca detail DRAFT/REJECTED.", maker_checker_rule: null, public_private_boundary: "Menampilkan histori verification_events.", pending_sop_ref: null }
+  - { operationId: updatePriceDraft, method: PATCH, path: "/api/v1/prices/{price_quote_id}", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [prices.create], scope_type: PERUMDA_GLOBAL, scope_rule: "Hanya diizinkan saat status DRAFT + version match.", maker_checker_rule: null, public_private_boundary: "Tidak mengubah harga historis PUBLISHED.", pending_sop_ref: null }
+  - { operationId: submitPriceForVerification, method: POST, path: "/api/v1/prices/{price_quote_id}/submit", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [prices.submit], scope_type: PERUMDA_GLOBAL, scope_rule: "DRAFT -> PENDING_VERIFICATION.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: verifyOrRejectPrice, method: POST, path: "/api/v1/prices/{price_quote_id}/verify", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, DIRECTOR], required_permissions: [prices.verify], scope_type: PERUMDA_GLOBAL, scope_rule: "Antrean verifikasi Perumda/Direksi.", maker_checker_rule: "SOD-01 (Actor != submitted_by) + BR-SYS-002 (non SYSTEM_ADMIN)", public_private_boundary: "Internal.", pending_sop_ref: BSD-DEC-005 }
+  - { operationId: publishPrice, method: POST, path: "/api/v1/prices/{price_quote_id}/publish", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [prices.publish], scope_type: PERUMDA_GLOBAL, scope_rule: "Wajib status VERIFIED; backend menginvalidasi Redis sesudah commit.", maker_checker_rule: null, public_private_boundary: "Memublikasikan ke Portal Publik.", pending_sop_ref: null }
+  - { operationId: revokePrice, method: POST, path: "/api/v1/prices/{price_quote_id}/revoke", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [prices.revoke], scope_type: PERUMDA_GLOBAL, scope_rule: "Memerlukan alasan dan menginvalidasi cache.", maker_checker_rule: null, public_private_boundary: "Transaksi historis tetap utuh.", pending_sop_ref: null }
+  - { operationId: createDisbunReferencePrice, method: POST, path: "/api/v1/prices/disbun", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [prices.create], scope_type: PERUMDA_GLOBAL, scope_rule: "Tersimpan ke tabel disbun_reference_prices yang terpisah.", maker_checker_rule: null, public_private_boundary: "Dipisahkan dari harga PKS (BR-CMP-001).", pending_sop_ref: null }
+
+  # --- TBS Receiving & Grading ---
+  - { operationId: listReceipts, method: GET, path: "/api/v1/receipts", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [receipts.read], scope_type: COOPERATIVE, scope_rule: "FARMER: hanya farmer_id miliknya; COOPERATIVE_OPERATOR: cooperative_id miliknya; Perumda/Direksi: global.", maker_checker_rule: null, public_private_boundary: "Privat lintas scope.", pending_sop_ref: null }
+  - { operationId: createReceiptDraft, method: POST, path: "/api/v1/receipts", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [COOPERATIVE_OPERATOR], required_permissions: [receipts.create], scope_type: COOPERATIVE, scope_rule: "Petani & kebun wajib berada di koperasi milik operator.", maker_checker_rule: null, public_private_boundary: "Privat koperasi.", pending_sop_ref: null }
+  - { operationId: getReceiptDetail, method: GET, path: "/api/v1/receipts/{receipt_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [receipts.read], scope_type: COOPERATIVE, scope_rule: "Validasi kepemilikan farmer_id / cooperative_id; tolak 403 lintas pemilik.", maker_checker_rule: null, public_private_boundary: "Privat.", pending_sop_ref: null }
+  - { operationId: recordReceiptWeighing, method: POST, path: "/api/v1/receipts/{receipt_id}/weighing", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR], required_permissions: [receipts.weigh], scope_type: COOPERATIVE, scope_rule: "Koperasi pemilik; ditolak bila ALLOCATED/SHIPPED (TBS_RECEIPT_LOCKED).", maker_checker_rule: "Revisi pasca-VALIDATED mewajibkan correction_reason (BR-WGT-001)", public_private_boundary: "Petani dilarang mengakses (BR-MD-004).", pending_sop_ref: null }
+  - { operationId: recordReceiptGrading, method: POST, path: "/api/v1/receipts/{receipt_id}/grading", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR], required_permissions: [receipts.weigh], scope_type: COOPERATIVE, scope_rule: "Koperasi pemilik; memisahkan komponen potongan berat vs uang.", maker_checker_rule: null, public_private_boundary: "Privat.", pending_sop_ref: BSD-DEC-006 }
+  - { operationId: validateReceipt, method: POST, path: "/api/v1/receipts/{receipt_id}/validate", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR], required_permissions: [receipts.validate], scope_type: COOPERATIVE, scope_rule: "DRAFT -> VALIDATED pada scope koperasi.", maker_checker_rule: null, public_private_boundary: "Privat.", pending_sop_ref: null }
+  - { operationId: cancelReceipt, method: POST, path: "/api/v1/receipts/{receipt_id}/cancel", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR], required_permissions: [receipts.cancel], scope_type: COOPERATIVE, scope_rule: "Hanya DRAFT atau VALIDATED pra-alokasi.", maker_checker_rule: null, public_private_boundary: "Pertahankan histori CANCELLED.", pending_sop_ref: null }
+
+  # --- Contracts & Quota ---
+  - { operationId: listContracts, method: GET, path: "/api/v1/contracts", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [contracts.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Kontrak niaga hanya dapat dilihat Perumda & Direksi (rahasia komersial BSD §5.3).", maker_checker_rule: null, public_private_boundary: "Dilarang diakses publik maupun koperasi/PKS lain.", pending_sop_ref: BSD-DEC-001 }
+  - { operationId: createContract, method: POST, path: "/api/v1/contracts", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [contracts.write], scope_type: PERUMDA_GLOBAL, scope_rule: "Menyimpan model usaha (PRINCIPAL/AGENT/UNCONFIRMED) dan kuota periode awal.", maker_checker_rule: null, public_private_boundary: "Rahasia komersial.", pending_sop_ref: BSD-DEC-001 }
+  - { operationId: getContractDetail, method: GET, path: "/api/v1/contracts/{contract_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [contracts.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Perumda & Direksi.", maker_checker_rule: null, public_private_boundary: "Rahasia komersial.", pending_sop_ref: BSD-DEC-001 }
+  - { operationId: approveContract, method: POST, path: "/api/v1/contracts/{contract_id}/approve", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [DIRECTOR], required_permissions: [contracts.approve], scope_type: PERUMDA_GLOBAL, scope_rule: "Mengaktifkan kontrak PENDING_APPROVAL -> ACTIVE.", maker_checker_rule: "SOD-02 (Actor != created_by) + BR-SYS-002", public_private_boundary: "Internal eksekutif.", pending_sop_ref: BSD-DEC-002 }
+  - { operationId: getContractQuotaStatus, method: GET, path: "/api/v1/contracts/{contract_id}/quota", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [contracts.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Dibaca langsung dari PostgreSQL (bukan Redis cache).", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: BSD-DEC-008 }
+  - { operationId: reserveContractQuota, method: POST, path: "/api/v1/contracts/{contract_id}/reservations", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [quotas.reserve], scope_type: PERUMDA_GLOBAL, scope_rule: "Row-level locking SQL pada contract_quota_periods; mencegah over-quota.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: BSD-DEC-008 }
+
+  # --- Logistics & e-DO ---
+  - { operationId: listDeliveryOrders, method: GET, path: "/api/v1/delivery-orders", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [delivery_orders.read], scope_type: COOPERATIVE, scope_rule: "FARMER: e-DO yg memuat receipt miliknya saja; COOPERATIVE: e-DO koperasinya; MILL: e-DO tujuan mill_id miliknya; Perumda/Direksi: global.", maker_checker_rule: null, public_private_boundary: "Harga kontrak & margin disembunyikan dari scope terbatas.", pending_sop_ref: null }
+  - { operationId: createDeliveryOrderDraft, method: POST, path: "/api/v1/delivery-orders", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [delivery_orders.create], scope_type: COOPERATIVE, scope_rule: "COOPERATIVE_OPERATOR dibatasi receipt koperasinya.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: BSD-DEC-009 }
+  - { operationId: getDeliveryOrderDetail, method: GET, path: "/api/v1/delivery-orders/{delivery_order_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [delivery_orders.read], scope_type: COOPERATIVE, scope_rule: "Validasi keterkaitan farmer/cooperative/mill pada e-DO.", maker_checker_rule: null, public_private_boundary: "Privasi identitas petani lain dijaga bagi scope petani.", pending_sop_ref: null }
+  - { operationId: issueDeliveryOrder, method: POST, path: "/api/v1/delivery-orders/{delivery_order_id}/issue", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [delivery_orders.issue, quotas.reserve], scope_type: COOPERATIVE, scope_rule: "Transaksi atomik penguncian muatan + reservasi kuota + QR hash.", maker_checker_rule: null, public_private_boundary: "QR token tidak mengekspose informasi ke publik anonim.", pending_sop_ref: BSD-DEC-009 }
+  - { operationId: transitionDeliveryOrderStatus, method: POST, path: "/api/v1/delivery-orders/{delivery_order_id}/status", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [delivery_orders.transition], scope_type: COOPERATIVE, scope_rule: "COOPERATIVE_OPERATOR hanya menandai IN_TRANSIT (READY->IN_TRANSIT); Perumda dapat menutup operasional RECEIVED->COMPLETED.", maker_checker_rule: null, public_private_boundary: "Tanpa GPS live tracking MVP.", pending_sop_ref: null }
+  - { operationId: cancelDeliveryOrder, method: POST, path: "/api/v1/delivery-orders/{delivery_order_id}/cancel", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS], required_permissions: [delivery_orders.cancel, quotas.release], scope_type: COOPERATIVE, scope_rule: "Koperasi hanya membatalkan DRAFT/READY miliknya sebelum keberangkatan; pembatalan lebih lanjut ditangani Perumda sesuai batas ARRIVED.", maker_checker_rule: null, public_private_boundary: "Melepaskan reservasi & alokasi muatan.", pending_sop_ref: BSD-DEC-009 }
+  - { operationId: verifyDeliveryOrderQr, method: POST, path: "/api/v1/delivery-orders/verify-qr", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [MILL_OPERATOR], required_permissions: [delivery_orders.verify_arrival], scope_type: MILL, scope_rule: "Wajib terautentikasi MILL_OPERATOR dan delivery_orders.mill_id == user mill scope.", maker_checker_rule: null, public_private_boundary: "Salah PKS mengembalikan 403 MILL_EDO_MILL_MISMATCH.", pending_sop_ref: null }
+
+  # --- Mill Weighing ---
+  - { operationId: listMillTickets, method: GET, path: "/api/v1/mill-tickets", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [mill_tickets.read], scope_type: MILL, scope_rule: "MILL_OPERATOR dibatasi mill_id miliknya; COOPERATIVE dibatasi e-DO asal koperasinya.", maker_checker_rule: null, public_private_boundary: "Privat antar-PKS.", pending_sop_ref: null }
+  - { operationId: createMillTicket, method: POST, path: "/api/v1/mill-tickets", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [MILL_OPERATOR], required_permissions: [mill_tickets.create], scope_type: MILL, scope_rule: "Petugas PKS hanya mencatat untuk mill_id miliknya dan e-DO berstatus ARRIVED.", maker_checker_rule: null, public_private_boundary: "Cross-mill access denied (403).", pending_sop_ref: BSD-DEC-011 }
+  - { operationId: getMillTicketDetail, method: GET, path: "/api/v1/mill-tickets/{ticket_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [mill_tickets.read], scope_type: MILL, scope_rule: "Validasi scope mill_id / cooperative_id.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: reviseMillTicket, method: PATCH, path: "/api/v1/mill-tickets/{ticket_id}", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [MILL_OPERATOR], required_permissions: [mill_tickets.create], scope_type: MILL, scope_rule: "Membentuk revisi berversi (is_current=true) sambil mempertahankan riwayat; diblokir bila faktur sudah final (MILL_TICKET_ALREADY_FINAL).", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: BSD-DEC-011 }
+  - { operationId: verifyMillTicket, method: POST, path: "/api/v1/mill-tickets/{ticket_id}/verify", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [MILL_OPERATOR], required_permissions: [mill_tickets.verify], scope_type: MILL, scope_rule: "Memverifikasi tiket dalam mill_id terkait dan memicu kesiapan rekonsiliasi.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+
+  # --- Reconciliation, Dispute & Farmer Allocation ---
+  - { operationId: listReconciliations, method: GET, path: "/api/v1/reconciliations", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [reconciliations.read], scope_type: PERUMDA_GLOBAL, scope_rule: "COOPERATIVE_OPERATOR dibatasi e-DO asal koperasinya.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: createOrTriggerReconciliation, method: POST, path: "/api/v1/reconciliations", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [reconciliations.calculate], scope_type: PERUMDA_GLOBAL, scope_rule: "Membentuk & menghitung kasus rekonsiliasi dari e-DO + tiket PKS terverifikasi.", maker_checker_rule: null, public_private_boundary: "Aturan toleransi 1,5% ditandai SIMULATION_ONLY.", pending_sop_ref: BSD-DEC-007 }
+  - { operationId: getReconciliationDetail, method: GET, path: "/api/v1/reconciliations/{reconciliation_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [reconciliations.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Validasi scope koperasi bila diakses operator koperasi.", maker_checker_rule: null, public_private_boundary: "Menampilkan snapshot rule_version_id & tolerance_percent.", pending_sop_ref: null }
+  - { operationId: calculateReconciliation, method: POST, path: "/api/v1/reconciliations/{reconciliation_id}/calculate", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [reconciliations.calculate], scope_type: PERUMDA_GLOBAL, scope_rule: "Eksekusi pencocokan & deteksi selisih negatif (BR-REC-009).", maker_checker_rule: null, public_private_boundary: "Toleransi berasal dari system_rule_versions.", pending_sop_ref: BSD-DEC-007 }
+  - { operationId: submitDisputeReview, method: POST, path: "/api/v1/reconciliations/{reconciliation_id}/review", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS], required_permissions: [reconciliations.review], scope_type: PERUMDA_GLOBAL, scope_rule: "DISPUTE_HOLD -> UNDER_REVIEW dengan alasan + bukti.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: resolveReconciliationDispute, method: POST, path: "/api/v1/reconciliations/{reconciliation_id}/resolve", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, DIRECTOR], required_permissions: [reconciliations.resolve], scope_type: PERUMDA_GLOBAL, scope_rule: "UNDER_REVIEW -> RESOLVED/CANCELLED dengan alasan wajib (BIZ-017).", maker_checker_rule: "SOD-03 (approved_by != reviewer_id) + BR-SYS-002", public_private_boundary: "Internal.", pending_sop_ref: BSD-DEC-012 }
+  - { operationId: simulateOrComputeFarmerAllocations, method: POST, path: "/api/v1/reconciliations/{reconciliation_id}/allocations", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE], required_permissions: [allocations.compute], scope_type: PERUMDA_GLOBAL, scope_rule: "Mode finalisasi nyata diblokir oleh REC_ALLOCATION_POLICY_UNCONFIRMED sampai BSD-DEC-013 disahkan; mode simulasi ditandai SIMULATION_ONLY.", maker_checker_rule: null, public_private_boundary: "Menjamin jumlah alokasi == total penyelesaian.", pending_sop_ref: BSD-DEC-013 }
+
+  # --- Finance, Invoices & Payments ---
+  - { operationId: listInvoices, method: GET, path: "/api/v1/invoices", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [invoices.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Memisahkan ACCOUNTS_RECEIVABLE vs ACCOUNTS_PAYABLE.", maker_checker_rule: null, public_private_boundary: "Dilarang pada portal publik & petani anonim.", pending_sop_ref: BSD-DEC-015 }
+  - { operationId: createInvoiceDraft, method: POST, path: "/api/v1/invoices", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_FINANCE], required_permissions: [invoices.create], scope_type: PERUMDA_GLOBAL, scope_rule: "Diblokir bila rekonsiliasi belum MATCHED/RESOLVED (FIN_DISPUTE_HOLD_BLOCKED).", maker_checker_rule: null, public_private_boundary: "Internal keuangan.", pending_sop_ref: BSD-DEC-001 }
+  - { operationId: getInvoiceDetail, method: GET, path: "/api/v1/invoices/{invoice_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [invoices.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Global keuangan/eksekutif.", maker_checker_rule: null, public_private_boundary: "Internal keuangan.", pending_sop_ref: null }
+  - { operationId: verifyInvoice, method: POST, path: "/api/v1/invoices/{invoice_id}/verify", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_FINANCE, DIRECTOR], required_permissions: [invoices.verify], scope_type: PERUMDA_GLOBAL, scope_rule: "Verifikasi faktur sebelum terbit.", maker_checker_rule: "SOD-04 (verified_by != created_by) + BR-SYS-002", public_private_boundary: "Internal keuangan.", pending_sop_ref: null }
+  - { operationId: issueInvoice, method: POST, path: "/api/v1/invoices/{invoice_id}/issue", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_FINANCE], required_permissions: [invoices.issue], scope_type: PERUMDA_GLOBAL, scope_rule: "Diblokir FIN_POLICY_UNCONFIRMED apabila business_model_code == UNCONFIRMED.", maker_checker_rule: null, public_private_boundary: "Menghasilkan nomor tagihan resmi.", pending_sop_ref: BSD-DEC-001 }
+  - { operationId: listPayments, method: GET, path: "/api/v1/payments", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_FINANCE, DIRECTOR], required_permissions: [payments.read], scope_type: FARMER, scope_rule: "FARMER hanya membaca Jalur C (alokasi/pembayaran pribadi, bukan inbound PKS->Perumda BR-PAY-010); COOPERATIVE membaca pembayaran ke koperasinya; FINANCE/DIRECTOR membaca jalur A/B/C penuh.", maker_checker_rule: null, public_private_boundary: "Data rekening rahasia disaring untuk akses terbatas.", pending_sop_ref: BSD-DEC-018 }
+  - { operationId: approveOrRejectInvoicePayment, method: POST, path: "/api/v1/payments/{id}/approve", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [DIRECTOR], required_permissions: [payments.approve], scope_type: PERUMDA_GLOBAL, scope_rule: "Otorisasi kewajiban pembayaran atas invoice_id (`{id}`) yang ISSUED. Tidak pernah mengeksekusi transfer bank atau mengubah status menjadi PAID.", maker_checker_rule: "SOD-05 (approver != requested_by) + BR-SYS-002 (non SYSTEM_ADMIN)", public_private_boundary: "Eksekutif keuangan.", pending_sop_ref: BSD-DEC-016 }
+  - { operationId: recordPaymentEvidence, method: POST, path: "/api/v1/payments", auth_required: true, csrf_required: true, idempotency_required: true, allowed_roles: [PERUMDA_FINANCE], required_permissions: [payments.record], scope_type: PERUMDA_GLOBAL, scope_rule: "Mencatat bukti transaksi manual masuk/keluar; menolak pembayaran parsial (PAY_PARTIAL_NOT_SUPPORTED) dan pasangan pihak tidak valid.", maker_checker_rule: null, public_private_boundary: "Tidak ada auto bank transfer API.", pending_sop_ref: BSD-DEC-017 }
+  - { operationId: verifyPaymentRecord, method: POST, path: "/api/v1/payments/{payment_id}/verify", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_FINANCE], required_permissions: [payments.verify], scope_type: PERUMDA_GLOBAL, scope_rule: "Memverifikasi bukti bayar (VERIFIED/REJECTED) atau mencatat REVERSED atas bukti terverifikasi.", maker_checker_rule: "SOD-06 (verified_by != recorded_by) + BR-SYS-002", public_private_boundary: "Baru dapat melunaskan status faktur menjadi PAID.", pending_sop_ref: BSD-DEC-018 }
+
+  # --- File Evidence Support ---
+  - { operationId: uploadEvidenceMetadata, method: POST, path: "/api/v1/files", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR], required_permissions: [files.upload], scope_type: PERUMDA_GLOBAL, scope_rule: "Validasi MIME, ukuran berkas, checksum, non-public storage key (TRD §13.6).", maker_checker_rule: null, public_private_boundary: "Tidak menghasilkan URL publik permanen (DBD §22.4).", pending_sop_ref: null }
+  - { operationId: downloadEvidenceFile, method: GET, path: "/api/v1/files/{file_id}", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [files.read], scope_type: MILL, scope_rule: "MILL_OPERATOR dibatasi pada file bukti tiket PKS miliknya.", maker_checker_rule: null, public_private_boundary: "Akses terotorisasi tanpa path traversal.", pending_sop_ref: null }
+
+  # --- Reporting & Dashboards ---
+  - { operationId: getOverviewReport, method: GET, path: "/api/v1/reports/overview", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [FARMER, COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, MILL_OPERATOR, DIRECTOR], required_permissions: [reports.operational.read], scope_type: COOPERATIVE, scope_rule: "Ringkasan KPI terisolasi sesuai role dan scope (Petani, Koperasi, Perumda, PKS, Direksi); mengecualikan transaksi CANCELLED.", maker_checker_rule: null, public_private_boundary: "Menyertakan data_freshness & penanda SIMULATION_ONLY.", pending_sop_ref: null }
+  - { operationId: getSupplyReport, method: GET, path: "/api/v1/reports/supply", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, DIRECTOR], required_permissions: [reports.operational.read], scope_type: COOPERATIVE, scope_rule: "Tonase berdasarkan rentang tanggal & koperasi/PKS sesuai scope.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: getReconciliationReport, method: GET, path: "/api/v1/reports/reconciliation", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [COOPERATIVE_OPERATOR, PERUMDA_OPERATIONS, PERUMDA_FINANCE, DIRECTOR], required_permissions: [reports.operational.read], scope_type: COOPERATIVE, scope_rule: "Rekap status rekonsiliasi per periode sesuai scope.", maker_checker_rule: null, public_private_boundary: "Menyertakan rule_version.", pending_sop_ref: BSD-DEC-007 }
+  - { operationId: getFinanceReport, method: GET, path: "/api/v1/reports/finance", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_FINANCE, DIRECTOR], required_permissions: [reports.finance.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Memisahkan Piutang PKS, Kas Masuk, Kewajiban AP, Dibayar, serta Kontribusi Kotor Simulasi (dilarang melabelinya laba bersih BR-MRG-005).", maker_checker_rule: null, public_private_boundary: "Terlarang untuk publik, petani, koperasi, dan PKS.", pending_sop_ref: BSD-DEC-001 }
+
+  # --- Administration, System Rules & Audit ---
+  - { operationId: listUsers, method: GET, path: "/api/v1/admin/users", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [SYSTEM_ADMIN], required_permissions: [admin.users.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Hanya Administrator Sistem.", maker_checker_rule: null, public_private_boundary: "Tidak menyertakan password_hash.", pending_sop_ref: null }
+  - { operationId: createUser, method: POST, path: "/api/v1/admin/users", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [SYSTEM_ADMIN], required_permissions: [admin.users.write], scope_type: PERUMDA_GLOBAL, scope_rule: "Menetapkan peran dan scope eksplisit (FARMER/COOPERATIVE/MILL wajib target ID).", maker_checker_rule: "BR-SYS-002", public_private_boundary: "Password di-hash Argon2id.", pending_sop_ref: null }
+  - { operationId: updateUserAccess, method: PATCH, path: "/api/v1/admin/users/{user_id}", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [SYSTEM_ADMIN], required_permissions: [admin.users.write], scope_type: PERUMDA_GLOBAL, scope_rule: "Nonaktif/revoke sesi segera mencatat audit keamanan.", maker_checker_rule: "BR-SYS-002", public_private_boundary: "Internal admin.", pending_sop_ref: null }
+  - { operationId: listSystemRuleVersions, method: GET, path: "/api/v1/admin/rule-versions", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, DIRECTOR, SYSTEM_ADMIN], required_permissions: [admin.rules.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Menampilkan aturan toleransi, grading, pembulatan berversi serta status CONFIRMED vs SIMULATION_ONLY.", maker_checker_rule: null, public_private_boundary: "Internal.", pending_sop_ref: null }
+  - { operationId: createSystemRuleVersion, method: POST, path: "/api/v1/admin/rule-versions", auth_required: true, csrf_required: true, idempotency_required: false, allowed_roles: [PERUMDA_OPERATIONS, DIRECTOR, SYSTEM_ADMIN], required_permissions: [admin.rules.write], scope_type: PERUMDA_GLOBAL, scope_rule: "SYSTEM_ADMIN hanya dapat mendaftarkan entri bertanda SIMULATION/DRAFT konfigurasi; pengaktifan aturan bisnis final wajib persetujuan pejabat berwenang (AFD §27.3, BR-SYS-002).", maker_checker_rule: "BR-SYS-002", public_private_boundary: "Tidak mengubah transaksi historis.", pending_sop_ref: BSD-DEC-007 }
+  - { operationId: listAuditEvents, method: GET, path: "/api/v1/admin/audit-events", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [DIRECTOR, SYSTEM_ADMIN], required_permissions: [admin.audit.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Log audit bisnis append-only dan pelacakan Request ID; teredaksi dari secrets & nomor rekening.", maker_checker_rule: null, public_private_boundary: "Dilarang diakses publik atau pengguna biasa.", pending_sop_ref: BSD-DEC-020 }
+  - { operationId: getSystemObservabilitySummary, method: GET, path: "/api/v1/admin/system-health", auth_required: true, csrf_required: false, idempotency_required: false, allowed_roles: [SYSTEM_ADMIN], required_permissions: [admin.health.read], scope_type: PERUMDA_GLOBAL, scope_rule: "Ringkasan CCTV Digital teknis (`/health/ready`, hit ratio Redis, antrean error 5xx per Request ID).", maker_checker_rule: null, public_private_boundary: "Non-transaksional; tidak menampilkan nilai rupiah/faktur sensitif.", pending_sop_ref: null }
