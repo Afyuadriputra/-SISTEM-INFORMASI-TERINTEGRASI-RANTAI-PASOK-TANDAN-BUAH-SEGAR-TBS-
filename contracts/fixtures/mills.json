@@ -1,0 +1,126 @@
+{
+  "fixture_meta": {
+    "policy_classification": "SIMULATION_ONLY",
+    "note": "Mencakup PKS aktif terverifikasi koordinat, PKS tanpa koordinat, PKS is_public=false, dan profil kantor Perumda Pelalawan."
+  },
+  "mill_companies": [
+    {
+      "id": "30000000-0000-4000-8000-000000000101",
+      "party_id": "10000000-0000-4000-8000-000000000120",
+      "company_code": "MC-SWU-01",
+      "company_name": "PT Sawit Utama Pelalawan",
+      "contact_phone": "0761-000-101",
+      "address": "Jl. Lintas Timur KM 58, Pangkalan Kerinci, Pelalawan",
+      "status": "ACTIVE",
+      "created_at": "2026-10-01T01:00:00Z"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000102",
+      "party_id": "10000000-0000-4000-8000-000000000121",
+      "company_code": "MC-LGM-02",
+      "company_name": "PT Langgam Agro Makmur",
+      "contact_phone": "0761-000-102",
+      "address": "Jl. Poros Langgam KM 12, Kec. Langgam, Pelalawan",
+      "status": "ACTIVE",
+      "created_at": "2026-10-01T01:00:00Z"
+    }
+  ],
+  "mills": [
+    {
+      "id": "30000000-0000-4000-8000-000000000001",
+      "mill_company_id": "30000000-0000-4000-8000-000000000101",
+      "company_name": "PT Sawit Utama Pelalawan",
+      "mill_code": "PKS-PKC-01",
+      "mill_name": "PKS Pangkalan Kerinci",
+      "address": "Jl. Lintas Timur KM 58, Kec. Pangkalan Kerinci, Kab. Pelalawan, Riau",
+      "district": "Pangkalan Kerinci",
+      "regency": "Pelalawan",
+      "province": "Riau",
+      "latitude": "0.402100",
+      "longitude": "101.860400",
+      "has_verified_coordinates": true,
+      "contact_phone": "0761-000-201",
+      "partnership_status": "ACTIVE",
+      "is_public": true,
+      "location_verified_at": "2026-10-15T02:00:00Z",
+      "version": 1,
+      "created_at": "2026-10-01T01:00:00Z",
+      "updated_at": "2026-10-15T02:00:00Z"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000002",
+      "mill_company_id": "30000000-0000-4000-8000-000000000102",
+      "company_name": "PT Langgam Agro Makmur",
+      "mill_code": "PKS-LGM-02",
+      "mill_name": "PKS Langgam Jaya",
+      "address": "Desa Tambak, Kec. Langgam, Kab. Pelalawan, Riau",
+      "district": "Langgam",
+      "regency": "Pelalawan",
+      "province": "Riau",
+      "latitude": null,
+      "longitude": null,
+      "has_verified_coordinates": false,
+      "contact_phone": "0761-000-202",
+      "partnership_status": "ACTIVE",
+      "is_public": true,
+      "location_verified_at": null,
+      "version": 1,
+      "created_at": "2026-10-05T01:00:00Z",
+      "updated_at": "2026-10-05T01:00:00Z"
+    },
+    {
+      "id": "30000000-0000-4000-8000-000000000003",
+      "mill_company_id": "30000000-0000-4000-8000-000000000101",
+      "company_name": "PT Sawit Utama Pelalawan",
+      "mill_code": "PKS-UKI-03",
+      "mill_name": "PKS Ukui Barat (Privat/Draft Publikasi)",
+      "address": "Jl. Lintas Ukui-Kerinci KM 14, Kec. Ukui, Kab. Pelalawan, Riau",
+      "district": "Ukui",
+      "regency": "Pelalawan",
+      "province": "Riau",
+      "latitude": "0.181200",
+      "longitude": "102.041100",
+      "has_verified_coordinates": true,
+      "contact_phone": "0761-000-203",
+      "partnership_status": "ACTIVE",
+      "is_public": false,
+      "location_verified_at": null,
+      "version": 1,
+      "created_at": "2026-11-01T01:00:00Z",
+      "updated_at": "2026-11-01T01:00:00Z"
+    }
+  ],
+  "public_profile": {
+    "organization_name": "Perumda Tuah Sekata (Kabupaten Pelalawan, Riau)",
+    "business_unit_name": "Unit Agro Niaga — Perdagangan TBS Kelapa Sawit",
+    "excluded_units_notice": "Unit Listrik dan Gas berada di luar cakupan sistem informasi Agro Niaga.",
+    "about_title": "Tentang Perumda Tuah Sekata & Unit Agro Niaga",
+    "about_summary": "Portal transparansi informasi harga TBS multi-PKS, direktori mitra pabrik, dan tata niaga rantai pasok terintegrasi Kabupaten Pelalawan.",
+    "partnership_title": "Informasi Kemitraan Rantai Pasok TBS",
+    "partnership_summary": "Kemitraan terbuka bagi kelompok tani/koperasi dan PKS mitra berizin di Kabupaten Pelalawan sesuai SOP Verifikasi Perumda.",
+    "partnership_requirements": [
+      "Identitas badan hukum koperasi/kelompok tani atau izin usaha PKS yang sah.",
+      "Kelengkapan lokasi kebun/pabrik dan verifikasi administratif resmi Perumda.",
+      "Kontrak niaga & parameter harga privat tetap dijaga terpisah dari portal publik (BR-PUB-003)."
+    ],
+    "offices": [
+      {
+        "id": "30000000-0000-4000-8000-000000000501",
+        "office_name": "Kantor Layanan Unit Agro Niaga — Perumda Tuah Sekata",
+        "address": "Jl. Maharaja Indra, Pangkalan Kerinci, Kab. Pelalawan, Riau",
+        "latitude": "0.399800",
+        "longitude": "101.855200",
+        "public_contact": "Kantor Resmi Perumda Pelalawan (Layanan Agro Niaga)"
+      }
+    ]
+  },
+  "public_notices": [
+    {
+      "id": "30000000-0000-4000-8000-000000000601",
+      "title": "Transparansi Harga TBS Simulasi & Pemisahan Acuan Disbun",
+      "body": "Harga PKS mitra diperbarui melalui proses verifikasi internal. Harga acuan Disbun Provinsi Riau ditampilkan terpisah sebagai referensi regulasi.",
+      "start_at": "2026-11-01T00:00:00Z",
+      "end_at": "2026-12-31T23:59:59Z"
+    }
+  ]
+}
