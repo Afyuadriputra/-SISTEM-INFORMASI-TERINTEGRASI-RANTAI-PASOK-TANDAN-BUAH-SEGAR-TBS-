@@ -118,14 +118,14 @@ class ReconciliationListEnvelope(StrictContractModel):
 class ReconciliationEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: ReconciliationCaseDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
 class AllocationListEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: list[FarmerSettlementAllocationDto]
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
