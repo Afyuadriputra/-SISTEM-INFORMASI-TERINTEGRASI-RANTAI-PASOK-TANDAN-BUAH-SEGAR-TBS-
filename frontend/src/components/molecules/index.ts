@@ -1,4 +1,5 @@
 export * from './DateRangeFilter';
+export * from './DemoModeBanner';
 export * from './FormField';
 export * from './LocationLink';
 export * from './PaginationControl';
