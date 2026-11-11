@@ -129,6 +129,11 @@ var/
 backend/var/
 .env
 backend/.env
+backend/.env.demo
+backend/.demo-credentials.local.txt
+ouput/*.local.md
+ouput/*.local.txt
+.demo-state/
 
 # --- Frontend Ignores ---
 node_modules/
