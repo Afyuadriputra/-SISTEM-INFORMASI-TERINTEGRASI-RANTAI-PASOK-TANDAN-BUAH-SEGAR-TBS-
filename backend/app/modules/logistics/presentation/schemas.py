@@ -116,7 +116,7 @@ class DeliveryOrderListEnvelope(StrictContractModel):
 class DeliveryOrderEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: DeliveryOrderDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
