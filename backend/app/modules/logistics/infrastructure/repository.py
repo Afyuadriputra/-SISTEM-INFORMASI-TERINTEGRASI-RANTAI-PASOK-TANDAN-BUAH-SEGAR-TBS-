@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import Row, Select, func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
@@ -58,13 +59,8 @@ def _require_do(entity: DeliveryOrderEntity | None) -> DeliveryOrderEntity:
     return entity
 
 
-async def _fetch_do_entity(
-    session: AsyncSession,
-    delivery_order_id: UUID,
-    *,
-    filter_farmer_ids: set[UUID] | None = None,
-) -> DeliveryOrderEntity | None:
-    stmt = (
+def _do_detail_stmt() -> Select[tuple[DeliveryOrderModel, str, str, str]]:
+    return (
         select(
             DeliveryOrderModel,
             MillModel.mill_name,
@@ -78,30 +74,18 @@ async def _fetch_do_entity(
             selectinload(DeliveryOrderModel.lines),
             selectinload(DeliveryOrderModel.status_events),
         )
-        .where(DeliveryOrderModel.id == delivery_order_id)
     )
-    row_tuple = (await session.execute(stmt)).first()
-    if row_tuple is None:
-        return None
-    do_row, mill_name, plate_number, driver_name = row_tuple
 
-    line_receipt_ids = [ln.receipt_id for ln in do_row.lines]
-    receipt_meta: dict[UUID, tuple[str, UUID, str]] = {}
-    if line_receipt_ids:
-        rm_rows = (
-            await session.execute(
-                select(
-                    TbsReceiptModel.id,
-                    TbsReceiptModel.receipt_number,
-                    TbsReceiptModel.farmer_id,
-                    FarmerModel.full_name,
-                )
-                .join(FarmerModel, FarmerModel.id == TbsReceiptModel.farmer_id)
-                .where(TbsReceiptModel.id.in_(line_receipt_ids))
-            )
-        ).all()
-        receipt_meta = {rid: (rnum, fid, fname) for rid, rnum, fid, fname in rm_rows}
 
+def _map_do_row(
+    do_row: DeliveryOrderModel,
+    mill_name: str,
+    plate_number: str,
+    driver_name: str,
+    receipt_meta: dict[UUID, tuple[str, UUID, str]],
+    *,
+    filter_farmer_ids: set[UUID] | None = None,
+) -> DeliveryOrderEntity:
     line_entities: list[DeliveryOrderLineEntity] = []
     for ln in do_row.lines:
         rnum, fid, fname = receipt_meta[ln.receipt_id]
@@ -158,6 +142,56 @@ async def _fetch_do_entity(
     )
 
 
+async def _hydrate_do_rows(
+    session: AsyncSession,
+    row_tuples: Sequence[Row[tuple[DeliveryOrderModel, str, str, str]]],
+    *,
+    filter_farmer_ids: set[UUID] | None = None,
+) -> list[DeliveryOrderEntity]:
+    if not row_tuples:
+        return []
+    line_receipt_ids = {ln.receipt_id for do_row, _, _, _ in row_tuples for ln in do_row.lines}
+    receipt_meta: dict[UUID, tuple[str, UUID, str]] = {}
+    if line_receipt_ids:
+        rm_rows = (
+            await session.execute(
+                select(
+                    TbsReceiptModel.id,
+                    TbsReceiptModel.receipt_number,
+                    TbsReceiptModel.farmer_id,
+                    FarmerModel.full_name,
+                )
+                .join(FarmerModel, FarmerModel.id == TbsReceiptModel.farmer_id)
+                .where(TbsReceiptModel.id.in_(line_receipt_ids))
+            )
+        ).all()
+        receipt_meta = {rid: (rnum, fid, fname) for rid, rnum, fid, fname in rm_rows}
+    return [
+        _map_do_row(
+            do_row,
+            mill_name,
+            plate_number,
+            driver_name,
+            receipt_meta,
+            filter_farmer_ids=filter_farmer_ids,
+        )
+        for do_row, mill_name, plate_number, driver_name in row_tuples
+    ]
+
+
+async def _fetch_do_entity(
+    session: AsyncSession,
+    delivery_order_id: UUID,
+    *,
+    filter_farmer_ids: set[UUID] | None = None,
+) -> DeliveryOrderEntity | None:
+    row_tuples = (
+        await session.execute(_do_detail_stmt().where(DeliveryOrderModel.id == delivery_order_id))
+    ).all()
+    items = await _hydrate_do_rows(session, row_tuples, filter_farmer_ids=filter_farmer_ids)
+    return items[0] if items else None
+
+
 class SqlAlchemyLogisticsRepository:
     """PostgreSQL implementation of LogisticsRepositoryPort."""
 
@@ -206,27 +240,23 @@ class SqlAlchemyLogisticsRepository:
                     )
                 ).scalar_one()
             )
-            ids = (
-                (
-                    await session.execute(
-                        select(DeliveryOrderModel.id)
-                        .where(*filters)
-                        .order_by(
-                            DeliveryOrderModel.created_at.desc(),
-                            DeliveryOrderModel.id.desc(),
-                        )
-                        .offset((page - 1) * page_size)
-                        .limit(page_size)
+            if total == 0:
+                return [], 0
+            row_tuples = (
+                await session.execute(
+                    _do_detail_stmt()
+                    .where(*filters)
+                    .order_by(
+                        DeliveryOrderModel.created_at.desc(),
+                        DeliveryOrderModel.id.desc(),
                     )
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
                 )
-                .scalars()
-                .all()
+            ).all()
+            results = await _hydrate_do_rows(
+                session, row_tuples, filter_farmer_ids=allowed_farmer_ids
             )
-            results: list[DeliveryOrderEntity] = []
-            for do_id in ids:
-                ent = await _fetch_do_entity(session, do_id, filter_farmer_ids=allowed_farmer_ids)
-                if ent is not None:
-                    results.append(ent)
             return results, total
 
     async def get_delivery_order_by_id(
