@@ -836,19 +836,93 @@ def check_k9_backend_readiness(oa: dict[str, Any], ec: dict[str, Any], sc: dict[
     return issues
 
 
-def check_k10_scope_hygiene() -> list[str]:
+PROTECTED_CONTRACT_PATHS: tuple[str, ...] = (
+    "contracts/openapi.v1.yaml",
+    "contracts/error-catalog.yaml",
+    "contracts/state-catalog.yaml",
+    "contracts/role-permissions.yaml",
+    "contracts/fixtures",
+)
+
+PROTECTED_V11_DOCS: tuple[str, ...] = (
+    "docs/PRD.md",
+    "docs/TRD.md",
+    "docs/AFD.md",
+    "docs/DBD.md",
+    "docs/BSD.md",
+    "docs/IPD.md",
+)
+
+
+def detect_development_phase(checkpoint_text: str) -> str:
+    """Detect active repository phase from IMPLEMENTATION_CHECKPOINTS.md headings."""
+    if "## FRONTEND DEVELOPMENT TRACK" in checkpoint_text:
+        return "FRONTEND"
+    if "# BACKEND DEVELOPMENT TRACK" in checkpoint_text:
+        return "BACKEND"
+    return "M0"
+
+
+def check_k10_scope_hygiene(
+    repo_root: Path | None = None,
+    checkpoint_text: str | None = None,
+    check_git_baseline: bool = True,
+) -> list[str]:
+    """Validate phase directory boundaries and guard protected contracts & V1.1 baseline."""
     issues: list[str] = []
-    checkpoint_file = DOCS_DIR / "IMPLEMENTATION_CHECKPOINTS.md"
-    in_backend_track = (
-        checkpoint_file.exists()
-        and "# BACKEND DEVELOPMENT TRACK" in checkpoint_file.read_text(encoding="utf-8")
-    )
-    forbidden_dirs = ("frontend", "alembic") if in_backend_track else ("backend", "frontend", "alembic", "infra")
+    root = repo_root or REPO_ROOT
+
+    if checkpoint_text is None:
+        cp_file = root / "docs" / "IMPLEMENTATION_CHECKPOINTS.md"
+        checkpoint_text = cp_file.read_text(encoding="utf-8") if cp_file.exists() else ""
+
+    phase = detect_development_phase(checkpoint_text)
+    if phase == "M0":
+        forbidden_dirs: tuple[str, ...] = ("backend", "frontend", "alembic", "infra")
+    elif phase == "BACKEND":
+        forbidden_dirs = ("frontend", "alembic")
+    else:
+        # Stray root alembic/ remains disallowed; canonical migrations reside in backend/alembic/.
+        forbidden_dirs = ("alembic",)
+
     for d in forbidden_dirs:
-        p = REPO_ROOT / d
-        if p.exists():
-            phase = "Backend Track" if in_backend_track else "M0"
-            issues.append(f"K10 forbidden directory exists during {phase}: {d}/")
+        if (root / d).exists():
+            issues.append(f"K10 forbidden directory exists during {phase} track: {d}/")
+
+    if phase in ("BACKEND", "FRONTEND") and (root / "backend").exists():
+        if not (root / "backend" / "alembic" / "versions").exists():
+            issues.append("K10 missing canonical backend/alembic/versions directory")
+
+    if phase == "FRONTEND" and (root / "frontend").exists():
+        for req_rel in ("frontend/package.json", "frontend/src/lib/api/generated.d.ts"):
+            if not (root / req_rel).exists():
+                issues.append(f"K10 missing required Frontend Track artifact: {req_rel}")
+
+    for doc_rel in PROTECTED_V11_DOCS:
+        doc_path = root / doc_rel
+        if (root / "docs").exists() and (not doc_path.exists() or doc_path.stat().st_size == 0):
+            issues.append(f"K10 missing or empty protected baseline document: {doc_rel}")
+
+    if check_git_baseline and (root / ".git").exists():
+        git_bin = shutil.which("git")
+        if git_bin:
+            targets = list(PROTECTED_CONTRACT_PATHS) + list(PROTECTED_V11_DOCS)
+            proc = subprocess.run(
+                [git_bin, "status", "--porcelain", "--", *targets],
+                cwd=str(root),
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if proc.returncode != 0:
+                issues.append(f"K10 git baseline check failed: {proc.stderr.strip()}")
+            else:
+                for line in proc.stdout.splitlines():
+                    if line.strip():
+                        issues.append(
+                            f"K10 unauthorized modification to protected contract/V1.1 baseline: {line.strip()}"
+                        )
+
     return issues
 
 
