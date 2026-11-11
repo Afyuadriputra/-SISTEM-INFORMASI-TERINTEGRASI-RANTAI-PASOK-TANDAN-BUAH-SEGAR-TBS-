@@ -124,7 +124,7 @@ async def verify_delivery_order_qr(
     )
     return DeliveryOrderEnvelope(
         data=delivery_order_to_dto(do),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -156,7 +156,7 @@ async def get_delivery_order_detail(
     )
     return DeliveryOrderEnvelope(
         data=delivery_order_to_dto(do),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -218,7 +218,7 @@ async def transition_delivery_order_status(
     )
     return DeliveryOrderEnvelope(
         data=delivery_order_to_dto(do),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
