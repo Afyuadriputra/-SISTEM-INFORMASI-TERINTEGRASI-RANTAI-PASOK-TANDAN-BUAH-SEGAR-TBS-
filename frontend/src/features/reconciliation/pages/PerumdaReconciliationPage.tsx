@@ -1,7 +1,7 @@
-import { AlertTriangle, Calculator, Scale, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Calculator, Plus, Scale, ShieldAlert } from 'lucide-react';
 import { useState } from 'react';
 import { Badge, Button, Select } from '@/components/atoms';
-import { PolicyNoticeBanner, StatusIndicator } from '@/components/molecules';
+import { FormField, PolicyNoticeBanner, StatusIndicator } from '@/components/molecules';
 import {
   ConfirmDialog,
   DataTable,
@@ -10,12 +10,14 @@ import {
   StateFeedbackCard,
 } from '@/components/organisms';
 import { DataManagementTemplate } from '@/components/templates';
+import { useDeliveryOrders } from '@/features/logistics/api/logisticsApi';
 import {
   useCalculateReconciliation,
   useComputeAllocations,
   useReconciliations,
   useResolveDispute,
   useSubmitDisputeReview,
+  useTriggerReconciliation,
   type ReconciliationCase,
 } from '@/features/reconciliation/api/reconciliationApi';
 import { hasPermission, type AuthenticatedUser } from '@/lib/auth/permissions';
@@ -34,18 +36,56 @@ export function PerumdaReconciliationPage({ user }: { readonly user: Authenticat
   const canAllocate = hasPermission(user, 'allocations.compute');
 
   const [statusFilter, setStatusFilter] = useState('');
+  const [triggerDoId, setTriggerDoId] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [dialogMode, setDialogMode] = useState<'review' | 'resolve' | null>(null);
 
+  const canReadDos = hasPermission(user, 'delivery_orders.read');
+  const dosQuery = useDeliveryOrders(undefined, canReadDos);
   const casesQuery = useReconciliations(statusFilter);
+  const triggerRec = useTriggerReconciliation();
   const calcRec = useCalculateReconciliation();
   const reviewDispute = useSubmitDisputeReview();
   const resolveDispute = useResolveDispute();
   const computeAlloc = useComputeAllocations();
 
   const cases = casesQuery.data?.data ?? [];
+  const deliveryOrders = dosQuery.data?.data ?? [];
+  const reconcilableDos = deliveryOrders.filter(
+    (d) =>
+      ['RECEIVED', 'COMPLETED'].includes(d.status) &&
+      !cases.some((c) => c.delivery_order_id === d.id),
+  );
+  const resolvedTriggerDoId =
+    reconcilableDos.some((d) => d.id === triggerDoId)
+      ? triggerDoId
+      : (reconcilableDos[0]?.id ?? '');
   const activeCase = cases.find((c) => c.id === selectedId) ?? cases[0] ?? null;
+
+  const handleTrigger = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resolvedTriggerDoId) {
+      return;
+    }
+    setActionError(null);
+    try {
+      const res = await triggerRec.mutateAsync({
+        delivery_order_id: resolvedTriggerDoId,
+        weight_basis: 'NET_WEIGHT_BEFORE_GRADING',
+      });
+      setSelectedId(res.data.id);
+      pushToast({
+        tone: res.data.status === 'DISPUTE_HOLD' ? 'warning' : 'success',
+        title: `Rekonsiliasi ${res.data.delivery_order_number} dihitung: ${res.data.status}.`,
+        requestId: res.request_id,
+      });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setActionError(`${error.code}: ${error.message}`);
+      }
+    }
+  };
 
   const handleCalculate = async (c: ReconciliationCase) => {
     setActionError(null);
@@ -156,6 +196,40 @@ export function PerumdaReconciliationPage({ user }: { readonly user: Authenticat
             </Select>
           </div>
         </FilterPanel>
+      }
+      formSlot={
+        canCalculate && reconcilableDos.length > 0 ? (
+          <FormSection
+            stepNumber="REC-01"
+            title="Mulai & Hitung Rekonsiliasi e-DO Diterima PKS"
+            description="Pilih pengiriman berstatus RECEIVED/COMPLETED yang tiket timbang PKS-nya sudah terverifikasi."
+          >
+            <form onSubmit={(e) => void handleTrigger(e)} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <FormField id="rec-trigger-do" label="Surat Jalan e-DO Siap Rekonsiliasi" required>
+                  <Select
+                    id="rec-trigger-do"
+                    value={resolvedTriggerDoId}
+                    onChange={(e) => setTriggerDoId(e.target.value)}
+                  >
+                    {reconcilableDos.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.delivery_order_number} (Asal: {formatKg(d.total_origin_weight_kg)})
+                      </option>
+                    ))}
+                  </Select>
+                </FormField>
+              </div>
+              <Button
+                type="submit"
+                isLoading={triggerRec.isPending}
+                leadingIcon={<Plus aria-hidden="true" className="h-4 w-4" />}
+              >
+                Buat & Hitung Rekonsiliasi
+              </Button>
+            </form>
+          </FormSection>
+        ) : undefined
       }
     >
       {actionError ? (
