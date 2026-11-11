@@ -38,6 +38,13 @@ export function isMockApiMode(): boolean {
   return frontendConfig.apiMode === 'mock';
 }
 
+export function isDemoBannerEnabled(
+  envOverride?: Partial<Record<string, string>>,
+): boolean {
+  const envSource = envOverride ?? (import.meta.env as Record<string, string | undefined>);
+  return envSource.VITE_DEMO_BANNER === 'true';
+}
+
 export function assertStrictRealModeNoMockFallback(): void {
   if (frontendConfig.apiMode === 'real') {
     throw new Error('Mode REAL API aktif: fallback ke mock API dilarang.');
