@@ -134,7 +134,7 @@ async def get_mill_ticket_detail(
     ticket = await service.get_ticket_detail(principal=principal, ticket_id=ticket_id)
     return MillTicketEnvelope(
         data=mill_ticket_to_dto(ticket),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -164,7 +164,7 @@ async def revise_mill_ticket(
     )
     return MillTicketEnvelope(
         data=mill_ticket_to_dto(ticket),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -186,6 +186,6 @@ async def verify_mill_ticket(
     ticket = await service.verify_ticket(principal=principal, ticket_id=ticket_id)
     return MillTicketEnvelope(
         data=mill_ticket_to_dto(ticket),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
