@@ -39,5 +39,6 @@ Backend API FastAPI (Modular Monolith + Clean Architecture 4 Layer) untuk Sistem
 .venv\Scripts\python.exe -m ruff format --check .
 .venv\Scripts\python.exe -m ruff check .
 .venv\Scripts\python.exe -m pyright
+.venv\Scripts\lint-imports.exe
 .venv\Scripts\python.exe -m pytest -q
 ```
