@@ -15,6 +15,18 @@
 | **M0.1** | Final Handoff Consistency Patch | **`READY — M0_HANDOFF_CONSISTENCY_VERIFIED`** | 2026-11-10 ([M0_CHANGELOG.md](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_CHANGELOG.md)) | Penyelarasan akhir pra-B0/F0: `TanStack Router`, 48 nama tabel kanonis `DBD §4`, breakdown `95` operasi (`2` health / `7` public / `4` auth / `82` internal = `84` authenticated), `8` operasi wajib `Idempotency-Key`, `M0-CNF-05 = RESOLVED`, arah dependency Clean Architecture 4 layer (`ADR-002`), & struktur `B0` inkremental tanpa folder kosong (`ADR-001`). |
 | **B0–B11** | Full Backend Implementation | **`BACKEND_INDEPENDENT_READY`** (`B0–B11 PASS`) | 2026-11-11 (`main @ 0243982`) | Seluruh `B0–B11` PASS (`11` modul domain + `core/` Clean Architecture 4 layer, `11` migrasi Alembic `0001..0011`, `95/95` operasi OpenAPI `1:1`, `69` kode error & `22` skenario negatif, `EXPLAIN ANALYZE` 0.02–0.60 ms, `pg_dump`/`pg_restore` 48 tabel terverifikasi, `import-linter` `16 kept, 0 broken`, `pyright` `0` error, `ruff` bersih, dan `pytest` **`76/76 passed`**). Siap lanjut integrasi Frontend `F0–F11`. |
 | **B11.1** | Post-Implementation Verification | **`READY — B11_1_POST_IMPLEMENTATION_VERIFIED`** | 2026-11-11 (`main @ 1b70664` + audit fixes) | Verifikasi independen pasca-B11: `48` tabel PG16 terekonsiliasi (`46` DBD §4 + `contract_approval_events` + `alembic_version`; `2` deferred), **`95/95` operasi OpenAPI teruji live HTTP `2xx` + `0` error JSON Schema Draft 2020-12** (pasca-perbaikan 16 envelope `meta: SimpleSuccessMeta`), perbaikan **N+1** list DO & Rekonsiliasi (`O(1)` query) + deterministic ordering alokasi, benchmark lokal `errors=0`, `import-linter` `16 kept`, `pyright` `0` error, `ruff` bersih, `pytest` **`77/77 passed`**, & kontrak `11/11` PASS. |
+| **F0** | Frontend Foundation | **`PASS — F0_FOUNDATION_VERIFIED`** | 2026-11-11 (`frontend/`) | React 19 + Vite 8 + TypeScript 5.9 `strict: true`, Tailwind v4 tokens D5 (`tokens.css`), `openapi-typescript` codegen dari `openapi.v1.yaml` (`generated.d.ts`), `decimal.js`, `69` kode error kanonis, TanStack Router (`26/26` rute `AFD §36`), TanStack Query + CSRF/Idempotency client, dan MSW `v3` berbasis `contracts/fixtures/*.json`. `tsc -b`, `eslint`, `vitest` (`7/7` PASS), & `vite build` lulus. |
+| **F1** | Design System & Component Library | **`PASS — F1_DESIGN_SYSTEM_VERIFIED`** | 2026-11-11 (`frontend/`) | Implementasi 5 tingkat Atomic Design (`atoms/`, `molecules/`, `organisms/`, `templates/`) selaras FigCraft D5 (`#14452F`, `#12231B`, `#F8F7F4`, Open Sans & Cascadia Mono subset `latin`), `WeightInputGroup` real-time `Decimal`, `StatusIndicator` seluruh 11 mesin state `SM-01..SM-11`, `ConfirmDialog` dengan Escape & alasan wajib, `DataTable` scroll-safe, `StateFeedbackCard` dengan `request_id`. `tsc -b`, `eslint`, `vitest` (`12/12` PASS), & `vite build` (`985ms`) lulus. |
+| **F2** | Portal Publik (7 Rute Publik) | **`PASS — F2_PUBLIC_PORTAL_VERIFIED`** | 2026-11-11 (`frontend/`) | Seluruh 7 rute publik (`/`, `/harga-tbs`, `/pks/:id`, `/lokasi-pks`, `/tentang`, `/kemitraan`, `/kontak`) terhubung ke API kontrak via React Query + MSW, pemisahan Disbun vs PKS (`BR-004`), filter harga & status kedaluwarsa, isolasi PKS privat `404` (`BR-PUB-004`), lazy `maplibre-gl` hanya untuk koordinat terverifikasi tanpa pin palsu, & `0` kebocoran PII petani. `tsc -b`, `eslint`, `vitest` (`16/16` PASS), & `vite build` (`1.71s`) lulus. |
+| **F3** | Autentikasi, Sesi & App Shell | **`PASS — F3_AUTH_SHELL_VERIFIED`** | 2026-11-11 (`frontend/`) | Halaman `/login` (React Hook Form + Zod, toggle sandi, CSRF attach/refresh, penolakan generik `401 AUTH_INVALID_CREDENTIALS`, helper simulasi khusus `mock` mode yang nonaktif di `real`), pengalihan anonim `/app/* -> /login?next=...`, penegakan RBAC `403 AUTH_ACCESS_DENIED`, label `Non-Approver (BR-SYS-002)` pada sidebar admin, & pembilasan cache saat logout. `tsc -b`, `eslint`, `vitest` (`19/19` PASS), & `vite build` (`1.69s`) lulus. |
+| **F4** | Master Data UI (`FLOW-05`, `FLOW-06`) | **`PASS — F4_MASTER_DATA_VERIFIED`** | 2026-11-11 (`frontend/`) | Form & daftar lengkap `/app/koperasi` (`FLOW-05` petani/kebun cakupan koperasi + armada) dan `/app/perumda` (`FLOW-06` master PKS + persetujuan eksplisit `is_public`), validasi koordinat berpasangan, nonaktif beraudit alasan wajib (`BR-023`), & optimistic locking `version`. `tsc -b`, `eslint`, `vitest` (`21/21` PASS), & `vite build` (`1.45s`) lulus. |
+| **F5** | Manajemen Harga Multi-PKS | **`PASS — F5_PRICING_VERIFIED`** | 2026-11-11 (`frontend/`) | Implementasi `/app/perumda/harga` (`FLOW-07..08`): siklus `DRAFT -> PENDING_VERIFICATION -> VERIFIED -> PUBLISHED / REVOKED`, pemisahan tugas `Maker != Checker` (`403 AUTH_CONFLICT_OF_DUTIES`), modal penolakan/pencabutan beralasan audit wajib, dan pemisahan harga acuan Disbun (`BR-004`). `tsc -b`, `eslint`, `vitest` (`22/22` PASS), & `vite build` (`1.39s`) lulus. |
+| **F6** | Penerimaan, Timbang & Grading | **`PASS — F6_RECEIVING_GRADING_VERIFIED`** | 2026-11-11 (`frontend/`) | Implementasi `/app/koperasi/penerimaan`: buat draf idempoten (`Idempotency-Key`), `WeightInputGroup` real-time `Decimal` Netto dengan penolakan `Tara > Bruto`, grading terpisah berlabel `Aturan Simulasi` (`BSD §9.3`), validasi, pembatalan beralasan audit, & kunci otomatis penerimaan berstatus `ALLOCATED`/`SHIPPED`. `tsc -b`, `eslint`, `vitest` (`23/23` PASS), & `vite build` (`2.27s`) lulus. |
+| **F7** | Kontrak, Kuota & Logistik e-DO | **`PASS — F7_CONTRACTS_LOGISTICS_VERIFIED`** | 2026-11-11 (`frontend/`) | Implementasi `/app/perumda/kontrak`, `/app/koperasi/surat-jalan`, & `/app/perumda/logistik`: pembuatan kontrak + model usaha `Pending SOP`, reservasi kuota idempoten anti-over-quota (`409 CONTRACT_QUOTA_EXCEEDED`), konsolidasi e-DO multi-petani dengan proteksi `LOG_DELIVERY_ALREADY_ASSIGNED`, QR token terkendali, & penegakan RBAC `contracts.read` koperasi. `tsc -b`, `eslint`, `vitest` (`25/25` PASS), & `vite build` (`1.49s`) lulus. |
+| **F8** | Timbang PKS & Rekonsiliasi Berat | **`PASS — F8_MILL_RECONCILIATION_VERIFIED`** | 2026-11-11 (`frontend/`) | Implementasi `/app/pks`, `/app/pks/tiket-timbang` (Pendekatan A manual terverifikasi, isolasi `MILL_EDO_MILL_MISMATCH`, anti-duplikat tiket, unggah bukti `/files`), & `/app/perumda/rekonsiliasi` (toleransi simulasi `1,5000%`, penandaan wajib `ANOMALY_NEGATIVE_DIFFERENCE`, dispute review/resolve beraudit, simulasi alokasi `30/20/50%` vs blokir `FINAL` `409 REC_ALLOCATION_POLICY_UNCONFIRMED`). `tsc -b`, `eslint`, `vitest` (`27/27` PASS), & `vite build` (`1.29s`) lulus. |
+| **F9** | Keuangan, Faktur, Pembayaran, Direksi & Petani | **`PASS — F9_FINANCE_APPROVAL_VERIFIED`** | 2026-11-11 (`frontend/`) | Implementasi `/app/perumda/pembayaran` (invoice AR, pembayaran ke petani & verifikasi Maker!=Checker idempoten, AP PKS terpisah + status `Pending SOP`, blokir `FIN_PAYMENT_DOUBLE_DISBURSEMENT`), `/app/direksi/persetujuan` (approval Direksi terpisah dari operator & Non-Approver `SYSTEM_ADMIN`), & `/app/petani`, `/app/petani/panen` (`FARMER` read-only terisolasi `own_scope`). `tsc -b`, `eslint`, `vitest` (`29/29` PASS), & `vite build` (`1.70s`) lulus. |
+| **F10** | Dashboard Analitik & Portal Admin Sistem | **`PASS — F10_DASHBOARDS_ADMIN_VERIFIED`** | 2026-11-11 (`frontend/`) | Melengkapi 4 rute tersisa sehingga **26/26 rute kanonis AFD §36** hidup penuh tanpa stub: `/app/direksi` (label wajib `Kontribusi Kotor (Simulasi) != Laba Bersih` `BR-MRG-005` & pemisahan kas/AR/AP), `/app/admin` (CCTV Digital `Request ID`, `/health/ready`, Redis hit ratio tanpa nominal keuangan), `/app/admin/pengguna` (`Non-Approver BR-SYS-002`, pencabutan sesi instan, aturan berversi append-only), & `/app/admin/audit` (audit append-only teredaksi). `tsc -b`, `eslint`, `vitest` (`32/32` PASS), & `vite build` (`1.45s`) lulus. |
+| **F11** | Hardening, Live FastAPI E2E & Sign-Off | **`READY — FRONTEND_BACKEND_INTEGRATION_VERIFIED`** (`F0–F11 PASS`) | 2026-11-11 (`frontend/` + FastAPI PG17/Redis) | Verifikasi live end-to-end (`VITE_API_MODE=real` tanpa MSW) melalui Vite `:5173` -> FastAPI Uvicorn `:8000` -> PostgreSQL 17 & Redis 7: Playwright Chromium `2/2` PASS (7 rute publik, auth cookie+CSRF, reload session, `SYSTEM_ADMIN Non-Approver` + rule versioning, Koperasi timbang->validasi->e-DO, & Direksi `BR-MRG-005`), responsif `1440px`/`375px` (`0` overflow), **`axe-core` WCAG 2.2 AA (`0` critical/serious)**, visual QA vs FigCraft D5, `VITE_API_MODE=real` build (`1.54s`, MSW tree-shaken keluar), antislop `0` temuan kode, `vitest` `11/11` (`32/32` PASS), & regresi backend `pytest` **`77/77 passed`**. |
 
 ---
 
@@ -714,3 +726,149 @@ Implementasi frontend mengacu pada **Master Implementation Plan** di [IPD.md](fi
   - `python contracts\scripts\validate_contracts.py` & `python -m unittest discover -s contracts\tests -v` -> **PASS** (`11/11` OK)
 - **Final Verdict:** **`READY — B11_1_POST_IMPLEMENTATION_VERIFIED`**
 - **Next Action:** Siap melanjutkan tahap **Frontend `F0–F11`** (atau melakukan `git commit` terkelola atas perbaikan `B11.1` sesuai kebutuhan workflow developer).
+
+---
+
+## FRONTEND DEVELOPMENT TRACK (`F0–F11`)
+
+### Checkpoint F0 — Project Foundation (`PASS — F0_FOUNDATION_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/`):**
+  - Konfigurasi strict TypeScript (`strict: true`, `erasableSyntaxOnly: true`, `verbatimModuleSyntax: true`), Vite 8 proxy `/api` & `/health` -> `127.0.0.1:8000`, Vitest + Testing Library + Playwright config, ESLint (`eslint-config-prettier`), dan Tailwind CSS v4 dengan seluruh semantic token FigCraft D5 pada `src/styles/tokens.css`.
+  - Codegen tipe OpenAPI `src/lib/api/generated.d.ts` langsung dari `contracts/openapi.v1.yaml` via `npm run codegen:api`.
+  - Infrastruktur inti: `src/lib/config/env.ts` (pemisahan tegas `VITE_API_MODE=mock|real` tanpa silent mock fallback), `src/lib/decimal/precision.ts` (`decimal.js` + zona waktu WIB `Asia/Jakarta`), `src/lib/errors/errorCatalog.ts` (`69/69` kode error), `src/lib/auth/permissions.ts` (`PUBLIC` + `7` peran, `26` rute `AFD §36`, `BR-SYS-002`), `src/lib/api/client.ts` (cookie credentials, auto-CSRF + 1x retry `403 AUTH_CSRF_INVALID`, `401` cache purge, dan `Idempotency-Key` persisten per-aksi), `src/app/router/router.tsx` (`26` rute lazy-loaded dengan guard autentikasi & peran), serta `src/mocks/` (`MSW v3` + `mockDb` dari `contracts/fixtures/*.json`).
+- **Hasil Verifikasi F0 (Post-Edit):**
+  - `npm.cmd run typecheck` (`tsc -b`) -> **PASS** (`0` error)
+  - `npm.cmd run lint` (`eslint .`) -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` (`vitest run`) -> **PASS** (`7/7` tests passed in `src/test/f0-foundation.test.ts`)
+  - `npm.cmd run build` (`tsc -b && vite build`) -> **PASS**
+  - Catatan regresi kontrak (`python contracts/scripts/validate_contracts.py`): `K1–K9` & `K11` **PASS**; `K10_scope_and_hygiene` menandai keberadaan `frontend/` yang memang diharapkan saat track frontend dimulai.
+
+### Checkpoint F1 — Design System & Atomic Components (`PASS — F1_DESIGN_SYSTEM_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/components/`):**
+  - **Atoms (`atoms/`):** `Button` (min-height `44px`, spinner loading), `Input`, `Select`, `Textarea`, `Label`, `Badge`, `Checkbox`, `Spinner`, `SkeletonRow`.
+  - **Molecules (`molecules/`):** `FormField`, `SearchField`, `PriceDisplay` (format `Rp/kg` presisi & tanggal WIB), `StatusIndicator` (`statusMeta.ts` mencakup `SM-01..SM-11` + `Data Simulasi`/`Pending SOP`), `WeightInputGroup` (pratinjau Netto berbasis `Decimal` + batas `Tara <= Bruto` sesuai `BR-TBS-004`), `DateRangeFilter`, `PaginationControl`, `LocationLink` (koordinat terverifikasi vs penegasan tanpa pin perkiraan `BR-PUB-004`), `PolicyNoticeBanner`.
+  - **Organisms (`organisms/`):** `PublicNavbar`, `PublicFooter`, `InternalSidebar` (panel gelap `#12231B`, teks `#B8C7BE`, banner non-approver `BR-SYS-002`, laci mobile Escape-accessible), `PageHeader`, `KPIGrid`, `FilterPanel`, `FormSection`, `DataTable` (`overflow-x-auto`), `ConfirmDialog` (Escape + alasan audit wajib), `StatusTimeline`, `StateFeedbackCard` (menampilkan pesan aman + `request_id`).
+  - **Templates (`templates/`):** `PublicTemplate`, `AuthTemplate`, `InternalAppShell` (dengan lencana mode `MODE SIMULASI (MSW)` vs `LIVE FASTAPI`), `DashboardTemplate`, `TransactionTemplate`, `DataManagementTemplate`, `ExecutiveTemplate`.
+- **Hasil Verifikasi F1 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`12/12` passed across `f0-foundation.test.ts` & `f1-design-system.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`35.00 kB` CSS / `7.23 kB` gzip; `index` `11.20 kB` gzip; `vendor-react` `64.49 kB` gzip).
+
+### Checkpoint F2 — Portal Publik 7 Rute Tanpa Login (`PASS — F2_PUBLIC_PORTAL_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/public/`):**
+  - `api/publicApi.ts`: React Query hooks untuk 7 endpoint publik OpenAPI (`prices`, `disbun-prices`, `mills`, `mill detail`, `profile`, `notices`).
+  - `pages/HomePage.tsx` (`/`), `HargaTbsPage.tsx` (`/harga-tbs`), `PksDetailPage.tsx` (`/pks/$id`), `LokasiPksPage.tsx` (`/lokasi-pks`), `TentangPage.tsx` (`/tentang`), `KemitraanPage.tsx` (`/kemitraan`), `KontakPage.tsx` (`/kontak`).
+  - `components/PksLocationMap.tsx`: lazy-loaded `maplibre-gl` (`vendor-maplibre` terisolasi hanya pada `/lokasi-pks`), fallback aman saat WebGL tidak tersedia, & kepatuhan `BR-PUB-004` / `DEC-014` (tanpa pin perkiraan untuk koordinat yang belum diverifikasi).
+- **Hasil Verifikasi F2 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`16/16` passed across `f0-foundation.test.ts`, `f1-design-system.test.tsx`, & `f2-public-portal.test.tsx`, memverifikasi `404` PKS `is_public=false`, pemisahan harga Disbun vs PKS, filter kedaluwarsa, & 7 rute publik)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.71s`; lazy chunk per halaman publik `0.92–2.67 kB` gzip).
+
+### Checkpoint F3 — Autentikasi & App Shell (`PASS — F3_AUTH_SHELL_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/auth/` & `frontend/src/app/router/`):**
+  - `pages/LoginPage.tsx`: validasi React Hook Form + Zod, pengamanan redirect `?next=` khusus rute `/app/*` yang sesuai izin peran (`canAccessRoutePath`), penanganan generik `401` tanpa enumerasi username, serta quick-actor simulasi MSW yang otomatis tersembunyi pada `VITE_API_MODE=real`.
+  - Guard terproteksi pada seluruh `18` rute internal `AFD §36` via `resolveSessionUser` + `ForbiddenRoleView` (`403`).
+- **Hasil Verifikasi F3 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`19/19` passed across `f0`, `f1`, `f2`, & `f3-auth-shell.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.69s`; `LoginPage` `2.59 kB` gzip).
+
+### Checkpoint F4 — Master Data UI (`PASS — F4_MASTER_DATA_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/master-data/`, `cooperative/`, `perumda/`):**
+  - `FarmerFarmSection.tsx` (`FLOW-05`), `MillMasterSection.tsx` (`FLOW-06`), `FleetMasterSection.tsx`, `KoperasiHomePage.tsx` (`/app/koperasi`), `PerumdaDashboardPage.tsx` (`/app/perumda`), serta stateful MSW `masterDataHandlers.ts` dengan proteksi cakupan koperasi/PKS dan validasi `version` + koordinat berpasangan.
+- **Hasil Verifikasi F4 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`21/21` passed termasuk uji `f4-master-data.test.tsx` untuk `FLOW-05` & `FLOW-06`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.45s`).
+
+### Checkpoint F5 — Manajemen Harga Multi-PKS (`PASS — F5_PRICING_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/pricing/`):**
+  - `api/pricingApi.ts`, `pages/PerumdaPricingPage.tsx` (`/app/perumda/harga`), & `src/mocks/handlers/pricingHandlers.ts` dengan seluruh transisi status harga `SM-01_PRICE_QUOTE`, blokir self-verify `AUTH_CONFLICT_OF_DUTIES`, serta formulir acuan Disbun terpisah.
+- **Hasil Verifikasi F5 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`22/22` passed termasuk uji E2E internal `f5-pricing.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.39s`; `PerumdaPricingPage` `4.09 kB` gzip).
+
+### Checkpoint F6 — Penerimaan, Penimbangan & Grading TBS (`PASS — F6_RECEIVING_GRADING_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/receiving/`):**
+  - `api/receivingApi.ts`, `pages/KoperasiReceivingPage.tsx` (`/app/koperasi/penerimaan`), & `src/mocks/handlers/receivingHandlers.ts` (idempotency pada `createReceiptDraft`, presisi `Decimal` 3 desimal untuk kg & 4 desimal untuk `%` grading, penegakan `TBS_INVALID_WEIGHT` dan `TBS_RECEIPT_LOCKED`).
+- **Hasil Verifikasi F6 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`23/23` passed termasuk `f6-receiving.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `2.27s`; `KoperasiReceivingPage` `4.02 kB` gzip).
+
+### Checkpoint F7 — Kontrak, Kuota & Logistik e-DO (`PASS — F7_CONTRACTS_LOGISTICS_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/logistics/`):**
+  - `api/logisticsApi.ts`, `PerumdaContractsPage.tsx` (`/app/perumda/kontrak`), `KoperasiSuratJalanPage.tsx` (`/app/koperasi/surat-jalan`), `PerumdaLogistikPage.tsx` (`/app/perumda/logistik`), & `src/mocks/handlers/logisticsHandlers.ts`.
+  - Memisahkan akses koperasi agar tidak memuat endpoint komersial `GET /api/v1/contracts` yang khusus `PERUMDA_*` / `DIRECTOR`, sambil mencegah double allocation & kuota berlebih secara idempoten.
+- **Hasil Verifikasi F7 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`25/25` passed termasuk `f7-contracts-logistics.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.49s`).
+
+### Checkpoint F8 — Timbang PKS & Rekonsiliasi Berat (`PASS — F8_MILL_RECONCILIATION_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/mill/` & `frontend/src/features/reconciliation/`):**
+  - `MillOperatorPortalPage.tsx` (`/app/pks`), `MillTicketsPage.tsx` (`/app/pks/tiket-timbang`), `PerumdaReconciliationPage.tsx` (`/app/perumda/rekonsiliasi`), `reconciliationApi.ts`, & `src/mocks/handlers/reconciliationHandlers.ts`.
+  - Mendukung unggah bukti `FormData` `/api/v1/files`, toleransi simulasi `1,5000%`, deteksi anomali selisih negatif (`mill > origin`), penyelesaian sengketa beraudit alasan wajib, & blokir finalisasi alokasi multi-petani (`REC_ALLOCATION_POLICY_UNCONFIRMED`).
+- **Hasil Verifikasi F8 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`27/27` passed termasuk `f8-mill-reconciliation.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.29s`).
+
+### Checkpoint F9 — Keuangan, Faktur, Pembayaran, Persetujuan Direksi & Petani (`PASS — F9_FINANCE_APPROVAL_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/finance/`, `director/`, `farmer/`):**
+  - `financeApi.ts`, `PerumdaFinancePage.tsx` (`/app/perumda/pembayaran`), `DireksiPersetujuanPage.tsx` (`/app/direksi/persetujuan`), `PetaniDashboardPage.tsx` (`/app/petani`), `PetaniPanenPage.tsx` (`/app/petani/panen`), & `src/mocks/handlers/financeHandlers.ts`.
+  - Menegakkan pemisahan faktur piutang (`AR`), hutang (`AP`) yang eksplisit bertanda `Pending SOP`, pembayaran ke petani idempoten anti-double disbursement (`409 FIN_PAYMENT_DOUBLE_DISBURSEMENT`), verifikasi Maker != Checker (`403 AUTH_CONFLICT_OF_DUTIES`), persetujuan khusus `DIRECTOR`, & portal `FARMER` read-only `own_scope`.
+- **Hasil Verifikasi F9 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`29/29` passed termasuk `f9-finance-approvals.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.70s`).
+
+### Checkpoint F10 — Dashboard Analitik, Observabilitas & Portal Admin Sistem (`PASS — F10_DASHBOARDS_ADMIN_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Artefak Inti (`frontend/src/features/reports/`, `director/`, `admin/`, & `mocks/handlers/adminReportsHandlers.ts`):**
+  - `reportsApi.ts`, `adminApi.ts`, `DireksiDashboardPage.tsx` (`/app/direksi`), `AdminDashboardPage.tsx` (`/app/admin`), `AdminPenggunaPage.tsx` (`/app/admin/pengguna`), `AdminAuditPage.tsx` (`/app/admin/audit`), pengayaan KPI `/app/perumda`, & registrasi penuh `routePageRegistry.tsx` (**26/26 rute kanonis AFD §36 tanpa stub**).
+  - Menegakkan `BR-MRG-005` (`is_net_profit: false` & label `Kontribusi Kotor Niaga (Data Simulasi - Bukan Laba Bersih)`), isolasi `SYSTEM_ADMIN` non-transaksional (`BR-SYS-002` blokir `CONFIRMED` -> `403 AUTH_OPERATION_FORBIDDEN`), pencabutan sesi beraudit wajib alasan, versi aturan append-only (`system_rule_versions`), & audit log append-only teredaksi.
+- **Hasil Verifikasi F10 (Post-Edit):**
+  - `npm.cmd run typecheck` -> **PASS** (`0` error)
+  - `npm.cmd run lint` -> **PASS** (`0` error, `0` warning)
+  - `npm.cmd test` -> **PASS** (`11/11` file, `32/32` passed termasuk `f10-dashboards-admin.test.tsx`)
+  - `npm.cmd run build` -> **PASS** (`vite build` `1.45s`).
+
+### Checkpoint F11 — UI/UX Hardening, Live FastAPI Integration, Playwright E2E, Visual QA & Final Sign-Off (`READY — FRONTEND_BACKEND_INTEGRATION_VERIFIED`)
+- **Tanggal:** `2026-11-11`
+- **Hardening & Perbaikan Integrasi Nyata (`frontend/`):**
+  - Menyelaraskan parameter query API ke kontrak M0.1 / FastAPI: `/api/v1/public/prices` & `/api/v1/public/mills` & `/api/v1/farmers` & `/api/v1/mills` menggunakan `q`, `sort_by` (`price_per_kg`/`mill_name`/`updated_at`), & `sort_dir` (`asc`/`desc`) sehingga integrasi langsung `HomePage` terhadap FastAPI bebas error validasi `VAL_INVALID_FORMAT`.
+  - Menambahkan `optimizeDeps: { exclude: ['maplibre-gl'] }` pada `frontend/vite.config.ts` untuk meniadakan error dev worker `504` pada `/lokasi-pks`.
+  - Menambahkan dukungan input UUID kontrak penugasan pada `KoperasiSuratJalanPage.tsx` saat koperasi belum memiliki e-DO teralokasi (menjaga isolasi `contracts.read` koperasi) dan guard `farmers.read` pada `PerumdaDashboardPage.tsx` bagi `PERUMDA_FINANCE`.
+  - Menambahkan `shrink-0 whitespace-nowrap` badge `FormSection` serta dead-code guard `import.meta.env.VITE_API_MODE !== 'real'` pada `src/main.tsx` sehingga build `VITE_API_MODE=real` menyingkirkan modul MSW sepenuhnya dari bundle produksi.
+- **Hasil Verifikasi Akhir F11 & Lintas Stack:**
+  - `VITE_API_MODE=real npm.cmd run build` -> **PASS** (`1.54s`, `0` chunk MSW/browser).
+  - `npm.cmd run typecheck` (`tsc -b`) -> **PASS** (`0` error).
+  - `npm.cmd run lint` (`eslint .`) -> **PASS** (`0` error, `0` warning).
+  - `npm.cmd test` (`vitest run`) -> **PASS** (`11/11` file, `32/32` passed).
+  - `npm.cmd run build` -> **PASS** (`1.47s`).
+  - `npm.cmd run test:e2e` (`playwright test` live against FastAPI Uvicorn + PostgreSQL 17 + Redis 7, `VITE_API_MODE=real`) -> **PASS** (`2/2` suite lulus: portal publik 7 rute, login/cookie/CSRF/reload persistensi, `SYSTEM_ADMIN` Non-Approver + rule versioning, Koperasi penerimaan->timbang->validasi->e-DO, & Dashboard Direksi `BR-MRG-005`; `0` `mockServiceWorker.js`, `0` `pageerror`, `0` HTTP `>=500`, `0` overflow `1440px`/`375px`).
+  - Audit aksesibilitas `axe-core` WCAG 2.2 AA via Playwright (`Home 1440px`, `Home 375px`, `Harga TBS 375px`, `Login 1440px`, `Admin Dashboard 1440px`, `Director Dashboard 1440px`) -> **PASS** (`0` pelanggaran `critical` atau `serious`).
+  - Inspeksi visual screenshot nyata (`f11-public-home-desktop.png`, `f11-koperasi-receiving-mobile.png`, `f11-admin-dashboard-desktop.png`, `f11-director-dashboard-desktop.png`) selaras palet/hirarki FigCraft D5; **0** temuan antislop (`—` em-dash / stub tersisa).
+  - Regresi backend (`backend\.venv\Scripts\python.exe -m pytest -q`) -> **PASS** (`77/77 passed`), tanpa perubahan sumber `backend/`, `contracts/`, atau 6 dokumen `V1.1`.
+- **Status Akhir Track Frontend (`F0–F11`):** **`READY — FRONTEND_BACKEND_INTEGRATION_VERIFIED`** *(seluruh indikator simulasi & elemen `Pending SOP` dipertahankan eksplisit menunggu pengesahan operasional Perumda sebelum rilis produksi).*

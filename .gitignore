@@ -129,3 +129,16 @@ var/
 backend/var/
 .env
 backend/.env
+
+# --- Frontend Ignores ---
+node_modules/
+frontend/node_modules/
+.svelte-kit/
+frontend/.svelte-kit/
+build/
+frontend/build/
+dist/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
