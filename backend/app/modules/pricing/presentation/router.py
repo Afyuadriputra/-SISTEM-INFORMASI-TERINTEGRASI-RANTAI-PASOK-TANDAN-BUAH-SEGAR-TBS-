@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.core.logging import request_id_ctx
-from app.core.schemas import build_pagination_meta
+from app.core.schemas import SimpleSuccessMeta, build_pagination_meta
 from app.modules.identity_access.domain.entities import AuthenticatedPrincipal, RoleCode
 from app.modules.identity_access.presentation.dependencies import require_access
 from app.modules.pricing.application.use_cases import PricingService
@@ -137,7 +137,7 @@ async def create_price_draft(
     )
     return InternalPriceEnvelope(
         data=quote_to_internal_dto(created),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -197,7 +197,7 @@ async def get_internal_price(
     quote = await service.get_internal_price(principal=principal, price_quote_id=price_quote_id)
     return InternalPriceEnvelope(
         data=quote_to_internal_dto(quote),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -233,7 +233,7 @@ async def update_price_draft(
     )
     return InternalPriceEnvelope(
         data=quote_to_internal_dto(updated),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -255,7 +255,7 @@ async def submit_price_for_verification(
     updated = await service.submit_price(principal=principal, price_quote_id=price_quote_id)
     return InternalPriceEnvelope(
         data=quote_to_internal_dto(updated),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -283,7 +283,7 @@ async def verify_or_reject_price(
     )
     return InternalPriceEnvelope(
         data=quote_to_internal_dto(updated),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -305,7 +305,7 @@ async def publish_price(
     updated = await service.publish_price(principal=principal, price_quote_id=price_quote_id)
     return InternalPriceEnvelope(
         data=quote_to_internal_dto(updated),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -332,6 +332,6 @@ async def revoke_price(
     )
     return InternalPriceEnvelope(
         data=quote_to_internal_dto(updated),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
