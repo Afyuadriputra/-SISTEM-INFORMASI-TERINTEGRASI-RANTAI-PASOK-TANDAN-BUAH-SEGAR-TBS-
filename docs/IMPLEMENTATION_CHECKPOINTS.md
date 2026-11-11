@@ -13,7 +13,8 @@
 | **D5** | Design Gap Closure & Final Sign-Off | **`READY — FIGCRAFT_DESIGN_SIGNOFF`** | 2026-11-10 ([d5-design-gap-closure-signoff.md](file:///C:/Users/M-SI/.gemini/antigravity/brain/c367ac0e-9189-476d-b1f9-69ba6e1730ec/d5-design-gap-closure-signoff.md)) | **26/26 (100%)** cakupan rute mandiri `AFD §36`, form penuh `FLOW-05` & `FLOW-06`, refactor `Organism/InternalSidebar #275` pada seluruh 21 layar internal desktop, 14 prototype flow penuh (`215` interaksi, `0` dangling), 7 layar bisnis mobile prioritas, `0/1451` gagal kontras WCAG, `0` missing font, dan `50` board/frame `readyForDev`. |
 | **M0** | Requirements & Contract Alignment | **`READY — M0_CONTRACT_ALIGNMENT_VERIFIED`** | 2026-11-10 ([M0_CONTRACT_VALIDATION_REPORT.md](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_CONTRACT_VALIDATION_REPORT.md)) | `openapi.v1.yaml` (`75` paths, `95` ops, `191` schemas), `error-catalog.yaml` (`69` kode error), `state-catalog.yaml` (`11` mesin state, `41` transisi), `role-permissions.yaml` (`PUBLIC` + `7` peran, `64` permissions, `1:1` OpenAPI), `11` fixture JSON (`22` skenario negatif), `ADR-001..010`, traceability lengkap, dan `10/10` cek validasi `K1–K10` lulus (`0` issue). |
 | **M0.1** | Final Handoff Consistency Patch | **`READY — M0_HANDOFF_CONSISTENCY_VERIFIED`** | 2026-11-10 ([M0_CHANGELOG.md](file:///d:/Kuliah/joki/radit/projek%20thesis%20bg%20givo/docs/m0/M0_CHANGELOG.md)) | Penyelarasan akhir pra-B0/F0: `TanStack Router`, 48 nama tabel kanonis `DBD §4`, breakdown `95` operasi (`2` health / `7` public / `4` auth / `82` internal = `84` authenticated), `8` operasi wajib `Idempotency-Key`, `M0-CNF-05 = RESOLVED`, arah dependency Clean Architecture 4 layer (`ADR-002`), & struktur `B0` inkremental tanpa folder kosong (`ADR-001`). |
-| **B0–B11** | Full Backend Implementation | **`BACKEND_INDEPENDENT_READY`** (`B0–B11 PASS`) | 2026-11-11 (`main @ 0243982`) | Seluruh `B0–B11` PASS (`11` modul domain + `core/` Clean Architecture 4 layer, `11` migrasi Alembic `0001..0011`, `95/95` operasi OpenAPI `1:1`, `69` kode error & `22` skenario negatif, `EXPLAIN ANALYZE` 0.02–0.60 ms, `pg_dump`/`pg_restore` 48 tabel terverifikasi, `import-linter` `16 kept, 0 broken`, `pyright` `0` error, `ruff` bersih, dan `pytest` **`76/76 passed`**). Siap lanjut integrasi Frontend `F0–F10`. |
+| **B0–B11** | Full Backend Implementation | **`BACKEND_INDEPENDENT_READY`** (`B0–B11 PASS`) | 2026-11-11 (`main @ 0243982`) | Seluruh `B0–B11` PASS (`11` modul domain + `core/` Clean Architecture 4 layer, `11` migrasi Alembic `0001..0011`, `95/95` operasi OpenAPI `1:1`, `69` kode error & `22` skenario negatif, `EXPLAIN ANALYZE` 0.02–0.60 ms, `pg_dump`/`pg_restore` 48 tabel terverifikasi, `import-linter` `16 kept, 0 broken`, `pyright` `0` error, `ruff` bersih, dan `pytest` **`76/76 passed`**). Siap lanjut integrasi Frontend `F0–F11`. |
+| **B11.1** | Post-Implementation Verification | **`READY — B11_1_POST_IMPLEMENTATION_VERIFIED`** | 2026-11-11 (`main @ 1b70664` + audit fixes) | Verifikasi independen pasca-B11: `48` tabel PG16 terekonsiliasi (`46` DBD §4 + `contract_approval_events` + `alembic_version`; `2` deferred), **`95/95` operasi OpenAPI teruji live HTTP `2xx` + `0` error JSON Schema Draft 2020-12** (pasca-perbaikan 16 envelope `meta: SimpleSuccessMeta`), perbaikan **N+1** list DO & Rekonsiliasi (`O(1)` query) + deterministic ordering alokasi, benchmark lokal `errors=0`, `import-linter` `16 kept`, `pyright` `0` error, `ruff` bersih, `pytest` **`77/77 passed`**, & kontrak `11/11` PASS. |
 
 ---
 
@@ -183,11 +184,11 @@ Implementasi frontend mengacu pada **Master Implementation Plan** di [IPD.md](fi
 
 ## Current Status
 
-- **Current Milestone:** `B4 — TBS Receiving & Grading` *(pasca `B3_PASS — PUBLIC_PORTAL_PRICING_VERIFIED`)*
-- **Last Milestone Passed:** `B3 — Public Portal & Pricing API` (`B3_PASS — PUBLIC_PORTAL_PRICING_VERIFIED`)
-- **Last Verified Commit:** `0243982` (`branch: main`)
-- **Backend Readiness:** `BACKEND_IN_PROGRESS` *(menjalankan B2→B11 sebelum `BACKEND_INDEPENDENT_READY`)*
-- **Environment:** Python `3.12.0` di `backend/.venv` (`uv 0.13.7`, `111` paket runtime/dev); PostgreSQL 16 terisolasi di WSL2 Ubuntu (`127.0.0.1:15432`, DB `agroniaga_dev` & `agroniaga_test`, role least-privilege `agroniaga_dev`, tanpa menyentuh PostgreSQL 17 Windows di port `5432`); Redis 7 di WSL2 Ubuntu (`127.0.0.1:6379`, dev DB `/0`, test DB `/1`).
+- **Current Milestone:** `B11.1 — Post-Implementation Verification` *(pasca `B11_PASS — BACKEND_INDEPENDENT_READY`; siap lanjut `F0–F11`)*
+- **Last Milestone Passed:** `B11.1 — Post-Implementation Verification` (`READY — B11_1_POST_IMPLEMENTATION_VERIFIED`)
+- **Last Verified Commit:** `1b70664` (`branch: main`, ditambah perbaikan kerja lokal `B11.1` siap commit oleh developer)
+- **Backend Readiness:** `BACKEND_INDEPENDENT_READY` *(B0–B11 dan audit independen B11.1 lulus terverifikasi)*
+- **Environment:** Python `3.12.0` di `backend/.venv` (`uv 0.13.7`, `114` paket terinstal & kompatibel); PostgreSQL 16 terisolasi di WSL2 Ubuntu (`127.0.0.1:15432`, DB `agroniaga_dev` & `agroniaga_test`, role least-privilege `agroniaga_dev`, tanpa menyentuh PostgreSQL 17 Windows di port `5432`); Redis 7 di WSL2 Ubuntu (`127.0.0.1:6379`, dev DB `/0`, test DB `/1`).
 - **Pending SOP:** Keputusan `BSD-DEC-001..020` & `AFD §41 #1..15` (`SOP-01..15`) tetap berstatus `SIMULATION_ONLY` / `PENDING_SOP` / `FUTURE`.
 - **Open Blockers:** Tidak ada.
 
@@ -661,4 +662,55 @@ Implementasi frontend mengacu pada **Master Implementation Plan** di [IPD.md](fi
 - **Counts:** Backend `76` PASS / `0` FAIL / `0` SKIPPED; Contract validator `11` PASS / `0` FAIL.
 - **Quality Gate:** **PASS (`B11_PASS — BACKEND_INDEPENDENT_READY`)**.
 - **Known Limitations:** Seluruh aturan bisnis berstatus `PENDING_SOP` / `SIMULATION_ONLY` (model usaha `UNCONFIRMED`, toleransi susut `1,5000%`, grading `2%`, pembagian hasil multi-petani final, penolakan bayar parsial) tetap terisolasi secara eksplisit sesuai kontrak M0.1 dan **tidak** mensimulasikan transfer bank otomatis maupun kelayakan produksi keuangan nyata sebelum SOP Perumda disahkan.
-- **Next Action:** Siap melanjutkan tahap **Frontend `F0–F10`** memakai API backend terverifikasi dan artefak kontrak `contracts/`.
+- **Next Action:** Siap melanjutkan tahap **Frontend `F0–F11`** memakai API backend terverifikasi dan artefak kontrak `contracts/`.
+
+---
+
+## B11.1 — Post-Implementation Verification
+
+- **Milestone ID:** `B11.1`
+- **Nama Milestone:** `Post-Implementation Independent Audit & Verification`
+- **Status:** **`READY — B11_1_POST_IMPLEMENTATION_VERIFIED`**
+- **Tanggal:** `2026-11-11`
+- **Baseline Commit:** `1b70664` (`branch: main`, ditambah patch perbaikan kerja lokal `B11.1` sebelum commit manual)
+- **Tujuan:** Audit independen atas kesesuaian implementasi `B0–B11` terhadap kode sumber aktual, skema PostgreSQL 16 live, kontrak `openapi.v1.yaml` (`95` operasi), invarian keamanan & pemisahan kewenangan, kinerja/konkurensi/N+1, kebersihan repositori/environment, serta re-verifikasi penuh seluruh regresi.
+- **Database Schema & Migrations Reconciliation (`agroniaga_dev` & `agroniaga_test`):**
+  - Kedua database berada pada revisi Alembic `0011_b10_reporting_indexes (head)`.
+  - Inspeksi katalog live PostgreSQL 16 mencatat tepat `48` tabel publik (`104` FK, `118` CHECK, `29` UNIQUE, `134` indeks dengan `10` indeks parsial): `46` tabel `DBD §4` (`CORE` + `SUPPORTING`) + `1` tabel audit transisi tambahan terverifikasi (`contract_approval_events` dari migrasi `0006`) + `1` tabel infrastruktur (`alembic_version`). Tepat `2` tabel `DBD §4` tetap berstatus `DEFERRED` sesuai `DBD §4.11` (`outbox_events`, `user_notifications`); `0` tabel tak terduga.
+- **Clean Architecture & Dependency Direction:**
+  - Audit AST atas seluruh `197` berkas Python di `backend/app/`: `0` siklus impor; `domain/` & `application/` bersih dari impor `infrastructure/` / `presentation/` / FastAPI / ORM / Redis.
+  - `.venv\Scripts\lint-imports.exe` -> `Contracts: 16 kept, 0 broken` (`230 files, 1084 dependencies`).
+- **Contract Parity & Runtime Live Schema Conformance (`95/95`):**
+  - Perbaikan kontrak runtime **16 envelope `meta: null` -> `SimpleSuccessMeta`** (`master_data` `MillEnvelope`, `pricing` `InternalPriceEnvelope`, `tbs_receiving` `ReceiptEnvelope`, `contracts` `ContractEnvelope` / `QuotaPeriodListEnvelope` / `QuotaReservationEnvelope`, `logistics` `DeliveryOrderEnvelope`, `mill_weighing` `MillTicketEnvelope`, & `reconciliation` `ReconciliationEnvelope` / `AllocationListEnvelope`) sehingga cocok 100% dengan `$ref: #/components/schemas/SimpleSuccessMeta` non-nullable di `contracts/openapi.v1.yaml`.
+  - Penambahan `test_b11_remaining_ops_schema_conformance_and_n1_budget` pada `backend/tests/integration/test_b11_contract_conformance.py` menutup cakupan live `2xx` untuk seluruh `23` operasi yang sebelumnya hanya tersentuh non-2xx / statis (`GET /health/live`, `listCooperatives`, `getFarmer`, `listFarms`, `listMillCompanies`, `updateMill`, `listVehicles`, `getPricingMetadata`, `listInternalPrices`, `getInternalPrice`, `updatePriceDraft`, `getPublicMillDetail`, `getPublicPriceDetail`, `listReceipts`, `cancelReceipt`, `listContracts`, `getContractDetail`, `listDeliveryOrders`, `listMillTickets`, `listReconciliations`, `calculateReconciliation`, `listUsers`, `listSystemRuleVersions`).
+  - Hasil probe live FastAPI + `jsonschema.Draft202012Validator` (`audit_runtime_probe.py`): **`95/95` operasi OpenAPI tereksekusi dengan status `2xx`**, `0` operasi tersisa (`unhit_ops: []`, `non_2xx_only: {}`), & **`0` error JSON Schema** (`schema_errors_unique: []`).
+- **Security, Integrity & Business-Rule Invariants:**
+  - Scan AST hardcoded credentials di `backend/app/` & `backend/alembic/` bersih (literal hanya ada sebagai default lokal / validator guard staging-prod pada `backend/app/core/config.py`).
+  - Terverifikasi lewat suite integrasi & unit: cookie `HttpOnly` + `SameSite=lax`, rotasi sesi saat re-login, pembatalan sesi instan saat akun `INACTIVE`/logout, penolakan `AUTH_CSRF_INVALID` (`403`) termasuk header `Origin` silang, rate limit login Redis (`429 AUTH_TOO_MANY_REQUESTS` + `Retry-After`), fail-closed Redis (`503 SYS_DEPENDENCY_UNAVAILABLE`), pembatasan lintas peran/cakupan (`AUTH_ACCESS_DENIED`, `AUTH_SCOPE_FORBIDDEN`), proteksi `BR-SYS-002` pada `SYSTEM_ADMIN`, maker != checker (`SOD-01..06`), proteksi file bukti + MIME magic bytes, append-only `audit_events` trigger PG, serta blokir `REC_WEIGHT_DISPUTE` / `REC_ALLOCATION_POLICY_UNCONFIRMED` / `APPROVED != PAID`. *(Catatan faktual: rate limiting terimplementasi pada endpoint login via `RedisLoginRateLimiter`; belum ada rate limiter generik terpisah pada endpoint tulis terautentikasi).*
+- **N+1 Fixes, Deterministic Ordering & Benchmark Lokal (`agroniaga_test`):**
+  - Perbaikan query **N+1** pada `SqlAlchemyLogisticsRepository.list_delivery_orders` dan `SqlAlchemyReconciliationRepository.list_cases` menjadi batch hydration (`_case_detail_stmt` / `_hydrate_case_rows` & `_do_detail_stmt` / `_hydrate_do_rows`) serta penyempurnaan urutan deterministik alokasi petani (`DeliveryOrderLineModel.created_at, TbsReceiptModel.receipt_number, DeliveryOrderLineModel.id` + offset mikrodetik pada `FarmerSettlementAllocationModel.created_at`). Terverifikasi otomatis `O(1)` query count (`p1 == p3`) dan `<= 5` query domain SQL per halaman.
+  - Benchmark lokal terhadap `agroniaga_test` (`25` baris rantai pasok sintetis, `5` PKS/kuota publik, ASGI transport pada loopback Windows):
+    - Public prices warm cache (`100` request, `10x10` konkuren): `0` error, `p50=25.175 ms`, `p95=38.990 ms` (`<= 1500 ms` TRD).
+    - Public prices cache miss (`20` sekuensial): `0` error, `p50=6.504 ms`, `p95=18.110 ms`.
+    - Public prices fallback saat Redis mati (`20` sekuensial): `0` error (`200 OK`), `p50=4039.275 ms`, `p95=4072.195 ms` *(disebabkan timeout koneksi Redis `REDIS_CONNECT_TIMEOUT_SECONDS=2.0` pada `get_cached_json` + `set_cached_json`; fallback fungsional namun latensi saat gangguan Redis mengikuti 2x timeout koneksi)*.
+    - Daftar terautentikasi (`25` baris/halaman, `30` sekuensial): `delivery-orders` `p95=165.944 ms`, `reconciliations` `p95=56.774 ms`, `receipts` `p95=46.926 ms`; dashboard `overview` `p95=50.435 ms` & `finance` `p95=50.062 ms` (`<= 3000 ms` TRD pada dataset uji lokal).
+    - Concurrency race reservasi kuota (`20` worker bersamaan ke sisa kuota `5000.000 kg`): `0` error tak terduga, tepat `5` `201 Created` & `15` `409 CON_INSUFFICIENT_QUOTA`, `p95=1077.563 ms`.
+    - Idempotent receipt replay (`20` sekuensial): `0` error, ID identik + `idempotency_replayed=true`, `p95=63.481 ms`.
+    - Kalkulasi rekonsiliasi (`15` kasus `READY`): `0` error, `p95=79.020 ms`.
+    - *(Keterbatasan benchmark: dijalankan pada satu node lokal Windows + loopback + dataset sintetis kecil `25` baris; bukan pengganti uji beban multi-host berskala produksi).*
+- **Files Modified in B11.1 (17 files):**
+  - `backend/app/modules/{logistics,master_data,mill_weighing,pricing,tbs_receiving}/presentation/{router,schemas}.py`, `backend/app/modules/contracts/presentation/schemas.py`, & `backend/app/modules/reconciliation/presentation/schemas.py` (`meta: SimpleSuccessMeta` non-nullable conformance)
+  - `backend/app/modules/reconciliation/infrastructure/repository.py` (batch list hydration + deterministic order)
+  - `backend/app/modules/logistics/infrastructure/repository.py` (batch list hydration)
+  - `backend/tests/integration/test_b11_contract_conformance.py` (live `95/95` conformance + Draft202012 validation + `O(1)` query budget)
+  - `backend/README.md` (menambahkan `.venv\Scripts\lint-imports.exe`)
+  - `docs/IMPLEMENTATION_CHECKPOINTS.md` (pembaruan status stale + checkpoint `B11.1`)
+- **Tests Executed (Post-Edit Final Verification):**
+  - `.venv\Scripts\ruff.exe format --check .` & `.venv\Scripts\ruff.exe check .` -> **PASS** (`236 files already formatted`, `All checks passed!`)
+  - `.venv\Scripts\pyright.exe` -> **PASS** (`0 errors, 0 warnings, 0 informations`)
+  - `.venv\Scripts\lint-imports.exe` -> **PASS** (`Contracts: 16 kept, 0 broken`, `230 files`, `1084 dependencies`)
+  - `.venv\Scripts\pytest.exe -v` -> **PASS** (`77/77 passed`: `46` unit, `3` architecture, `28` integration; `0` failed, `0` skipped)
+  - Runtime OpenAPI probe (`audit_runtime_probe.py`) -> **PASS** (`95/95` `2xx`, `0` unhit, `0` JSON Schema errors)
+  - `python contracts\scripts\validate_contracts.py` & `python -m unittest discover -s contracts\tests -v` -> **PASS** (`11/11` OK)
+- **Final Verdict:** **`READY — B11_1_POST_IMPLEMENTATION_VERIFIED`**
+- **Next Action:** Siap melanjutkan tahap **Frontend `F0–F11`** (atau melakukan `git commit` terkelola atas perbaikan `B11.1` sesuai kebutuhan workflow developer).
