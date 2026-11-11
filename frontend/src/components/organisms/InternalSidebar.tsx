@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from '@tanstack/react-router';
 import { LogOut, ShieldAlert, Sprout, X } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button, cn } from '@/components/atoms';
 import {
   ROLE_LABELS,
@@ -20,6 +20,35 @@ export function InternalSidebar({ user, mobileOpen, onCloseMobile }: InternalSid
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const [loggingOut, setLoggingOut] = useState(false);
+
+  const closeMobileWithFocusRestore = useCallback(() => {
+    onCloseMobile();
+    requestAnimationFrame(() => {
+      document.getElementById('mobile-portal-menu-trigger')?.focus();
+    });
+  }, [onCloseMobile]);
+
+  useEffect(() => {
+    if (!mobileOpen) {
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      const closeBtn = document.querySelector<HTMLButtonElement>(
+        '[role="dialog"][aria-label="Menu Portal Internal"] button[aria-label="Tutup panel menu"]',
+      );
+      closeBtn?.focus();
+    });
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMobileWithFocusRestore();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [mobileOpen, closeMobileWithFocusRestore]);
 
   const navItems = getInternalNavItemsForRoles(user.roles);
   const primaryRoleLabel = user.roles.map((r) => ROLE_LABELS[r] ?? r).join(', ');
@@ -46,6 +75,7 @@ export function InternalSidebar({ user, mobileOpen, onCloseMobile }: InternalSid
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-4">
           <Link
             to="/"
+            activeOptions={{ exact: true }}
             onClick={onCloseMobile}
             className="flex min-w-0 items-center gap-2.5 text-sidebar-text no-underline"
           >
@@ -59,7 +89,7 @@ export function InternalSidebar({ user, mobileOpen, onCloseMobile }: InternalSid
           </Link>
           <button
             type="button"
-            onClick={onCloseMobile}
+            onClick={closeMobileWithFocusRestore}
             aria-label="Tutup panel menu"
             className="inline-flex h-10 w-10 items-center justify-center rounded-md text-sidebar-muted hover:bg-white/10 hover:text-white lg:hidden"
           >
@@ -95,6 +125,7 @@ export function InternalSidebar({ user, mobileOpen, onCloseMobile }: InternalSid
               <Link
                 key={item.to}
                 to={item.to}
+                activeOptions={{ exact: isExactPortalBase }}
                 onClick={onCloseMobile}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
