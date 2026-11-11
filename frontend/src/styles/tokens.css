@@ -1,0 +1,56 @@
+@import 'tailwindcss';
+
+/* Colors · Default (FigCraft D5 canonical) */
+@theme static {
+  --color-primary-default: #14452f;
+  --color-brand-hover: #0f3524;
+  --color-primary-foreground: #ffffff;
+  --color-primary-subtle: #eaf2ee;
+  --color-secondary-default: #4b5e48;
+  --color-secondary-foreground: #ffffff;
+  --color-secondary-subtle: #f1f4ef;
+  --color-accent-default: #b45309;
+  --color-accent-subtle: #fef3c7;
+  --color-accent-text: #78350f;
+  --color-canvas: #f8f7f4;
+  --color-surface-default: #ffffff;
+  --color-surface-subtle: #f2f0eb;
+  --color-sidebar-bg: #12231b;
+  --color-sidebar-active: #1e4d38;
+  --color-sidebar-text: #f4f6f4;
+  --color-sidebar-muted: #b8c7be;
+  --color-ink-primary: #1c1b18;
+  --color-ink-secondary: #57534e;
+  --color-text-muted: #6e6a63;
+  --color-border-subtle: #e4e1d9;
+  --color-border-control: #948e82;
+  --color-success-text: #166534;
+  --color-success-bg: #dcfce7;
+  --color-warning-text: #92400e;
+  --color-warning-bg: #fef3c7;
+  --color-danger-solid: #b91c1c;
+  --color-danger-text: #991b1b;
+  --color-danger-bg: #fee2e2;
+  --color-info-text: #1e40af;
+  --color-info-bg: #dbeafe;
+  --color-neutral-text: #44403c;
+  --color-neutral-bg: #efece6;
+}
+
+/* Scale & Tokens · Default (FigCraft D5 canonical) */
+@theme static {
+  --font-sans: 'Open Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'Cascadia Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --layout-sidebar-width: 256px;
+  --layout-touch-min: 44px;
+}
