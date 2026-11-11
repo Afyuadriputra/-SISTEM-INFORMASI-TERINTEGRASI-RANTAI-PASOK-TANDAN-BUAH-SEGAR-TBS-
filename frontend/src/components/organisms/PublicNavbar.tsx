@@ -1,11 +1,12 @@
 import { Link, useRouterState } from '@tanstack/react-router';
 import { Menu, Sprout, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/components/atoms';
 import { PUBLIC_NAV_ITEMS } from './navigationConfig';
 
 export function PublicNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export function PublicNavbar() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setMobileOpen(false);
+        requestAnimationFrame(() => menuBtnRef.current?.focus());
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -24,7 +26,7 @@ export function PublicNavbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-border-subtle bg-surface-default/95 backdrop-blur-xs">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <Link to="/" className="flex min-w-0 items-center gap-2.5 text-ink-primary no-underline">
+        <Link to="/" activeOptions={{ exact: true }} className="flex min-w-0 items-center gap-2.5 text-ink-primary no-underline">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary-default text-primary-foreground">
             <Sprout aria-hidden="true" className="h-5 w-5" />
           </span>
@@ -48,6 +50,7 @@ export function PublicNavbar() {
               <Link
                 key={item.to}
                 to={item.to}
+                activeOptions={{ exact: item.to === '/' }}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'inline-flex min-h-[44px] items-center rounded-md px-3 text-sm font-semibold transition-colors',
@@ -70,6 +73,7 @@ export function PublicNavbar() {
             Masuk Portal Internal
           </Link>
           <button
+            ref={menuBtnRef}
             type="button"
             aria-expanded={mobileOpen}
             aria-controls="public-mobile-drawer"
@@ -97,6 +101,7 @@ export function PublicNavbar() {
                 <Link
                   key={item.to}
                   to={item.to}
+                  activeOptions={{ exact: item.to === '/' }}
                   onClick={() => setMobileOpen(false)}
                   aria-current={active ? 'page' : undefined}
                   className={cn(
