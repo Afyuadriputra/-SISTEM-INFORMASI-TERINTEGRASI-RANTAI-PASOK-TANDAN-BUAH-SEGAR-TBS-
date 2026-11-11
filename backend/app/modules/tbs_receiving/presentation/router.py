@@ -134,7 +134,7 @@ async def get_receipt_detail(
     sim_notice = GRADING_SIMULATION_NOTICE if receipt.grading_items else None
     return ReceiptEnvelope(
         data=receipt_to_dto(receipt),
-        meta=SimpleSuccessMeta(simulation_notice=sim_notice) if sim_notice else None,
+        meta=SimpleSuccessMeta(simulation_notice=sim_notice),
         request_id=request_id_ctx.get(),
     )
 
@@ -164,7 +164,7 @@ async def record_receipt_weighing(
     )
     return ReceiptEnvelope(
         data=receipt_to_dto(receipt),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -225,7 +225,7 @@ async def validate_receipt(
     sim_notice = GRADING_SIMULATION_NOTICE if receipt.grading_items else None
     return ReceiptEnvelope(
         data=receipt_to_dto(receipt),
-        meta=SimpleSuccessMeta(simulation_notice=sim_notice) if sim_notice else None,
+        meta=SimpleSuccessMeta(simulation_notice=sim_notice),
         request_id=request_id_ctx.get(),
     )
 
@@ -253,6 +253,6 @@ async def cancel_receipt(
     )
     return ReceiptEnvelope(
         data=receipt_to_dto(receipt),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
