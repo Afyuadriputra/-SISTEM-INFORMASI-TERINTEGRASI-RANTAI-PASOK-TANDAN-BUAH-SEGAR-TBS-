@@ -116,7 +116,7 @@ class ReasonActionRequest(BaseModel):
 class ReceiptEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: TbsReceiptDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
