@@ -63,6 +63,7 @@ export function KoperasiSuratJalanPage({ user }: { readonly user: AuthenticatedU
   const [selectedReceiptIds, setSelectedReceiptIds] = useState<string[]>([]);
   const [millId, setMillId] = useState('');
   const [contractId, setContractId] = useState('');
+  const [customContractId, setCustomContractId] = useState('');
   const [vehicleId, setVehicleId] = useState('');
   const [driverId, setDriverId] = useState('');
   const [activeDoId, setActiveDoId] = useState<string | null>(null);
@@ -86,10 +87,12 @@ export function KoperasiSuratJalanPage({ user }: { readonly user: AuthenticatedU
     }
     const chosenMill = millId || mills[0]?.id;
     const chosenContract =
-      contractId ||
-      contracts.find((c) => c.status === 'ACTIVE')?.id ||
-      contracts[0]?.id ||
-      assignedContractIds[0];
+      contractId === '__CUSTOM__'
+        ? customContractId.trim()
+        : contractId ||
+          contracts.find((c) => c.status === 'ACTIVE')?.id ||
+          contracts[0]?.id ||
+          assignedContractIds[0];
     const chosenVehicle = vehicleId || vehicles[0]?.id;
     const chosenDriver = driverId || drivers[0]?.id;
     if (!chosenMill || !chosenContract || !chosenVehicle || !chosenDriver) {
@@ -298,8 +301,23 @@ export function KoperasiSuratJalanPage({ user }: { readonly user: AuthenticatedU
                                   Kontrak Terkait Penugasan #{idx + 1} ({cid.slice(-6)})
                                 </option>
                               ))}
+                          {!canReadContracts ? (
+                            <option value="__CUSTOM__">Input UUID Kontrak Penugasan Lain...</option>
+                          ) : null}
                         </Select>
                       )}
+                      {!canReadContracts && contractId === '__CUSTOM__' ? (
+                        <Input
+                          id="edo-contract-custom"
+                          aria-label="UUID Kontrak Penugasan Lain"
+                          monospace
+                          className="mt-2"
+                          value={customContractId}
+                          onChange={(e) => setCustomContractId(e.target.value)}
+                          placeholder="Tempel UUID kontrak penugasan baru..."
+                          required
+                        />
+                      ) : null}
                     </FormField>
                     <FormField id="edo-veh" label="Kendaraan" required>
                       <Select id="edo-veh" value={vehicleId || vehicles[0]?.id || ''} onChange={(e) => setVehicleId(e.target.value)}>
