@@ -30,8 +30,10 @@ export function InternalAppShell({ user, children }: InternalAppShellProps) {
         <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border-subtle bg-surface-default px-4 py-2.5 sm:px-6">
           <div className="flex items-center gap-3">
             <button
+              id="mobile-portal-menu-trigger"
               type="button"
               onClick={() => setMobileOpen(true)}
+              aria-expanded={mobileOpen}
               aria-label="Buka menu portal"
               className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border-control bg-surface-default text-ink-primary lg:hidden"
             >
