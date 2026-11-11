@@ -1,0 +1,75 @@
+@import '@fontsource/open-sans/latin-400.css';
+@import '@fontsource/open-sans/latin-500.css';
+@import '@fontsource/open-sans/latin-600.css';
+@import '@fontsource/open-sans/latin-700.css';
+@import '@fontsource/cascadia-mono/latin-400.css';
+@import '@fontsource/cascadia-mono/latin-600.css';
+@import './styles/tokens.css';
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    background-color: var(--color-canvas);
+    color: var(--color-ink-primary);
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--color-canvas);
+    color: var(--color-ink-primary);
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  a[href],
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary-default);
+    outline-offset: 2px;
+  }
+
+  [data-sidebar-surface='dark'] :focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  background-color: var(--color-primary-default);
+  color: var(--color-primary-foreground);
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
