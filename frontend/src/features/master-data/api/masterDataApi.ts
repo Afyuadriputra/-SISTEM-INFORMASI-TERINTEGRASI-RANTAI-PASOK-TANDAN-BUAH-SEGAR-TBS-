@@ -127,7 +127,7 @@ export function useUpdateFarm() {
   });
 }
 
-export function useMillCompanies() {
+export function useMillCompanies(enabled = true) {
   return useQuery({
     queryKey: queryKeys.masterData.millCompanies(),
     queryFn: () =>
@@ -135,6 +135,7 @@ export function useMillCompanies() {
         path: '/api/v1/mill-companies',
         query: { page_size: 50 },
       }),
+    enabled,
   });
 }
 
