@@ -1,6 +1,7 @@
 import { Menu, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/components/atoms';
+import { DemoModeBanner } from '@/components/molecules';
 import { InternalSidebar } from '@/components/organisms';
 import type { AuthenticatedUser } from '@/lib/auth/permissions';
 import { isMockApiMode } from '@/lib/config/env';
@@ -27,8 +28,8 @@ export function InternalAppShell({ user, children }: InternalAppShellProps) {
       />
 
       <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-border-subtle bg-surface-default px-4 py-2.5 sm:px-6">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-surface-default px-4 py-2.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
             <button
               id="mobile-portal-menu-trigger"
               type="button"
@@ -49,16 +50,19 @@ export function InternalAppShell({ user, children }: InternalAppShellProps) {
             </div>
           </div>
 
-          <span
-            className={cn(
-              'rounded-sm border px-2.5 py-1 font-mono text-xs font-semibold',
-              mockMode
-                ? 'border-warning-text/30 bg-warning-bg text-warning-text'
-                : 'border-success-text/30 bg-success-bg text-success-text',
-            )}
-          >
-            {mockMode ? 'MODE SIMULASI (MSW)' : 'LIVE FASTAPI'}
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <DemoModeBanner variant="badge" />
+            <span
+              className={cn(
+                'rounded-sm border px-2.5 py-1 font-mono text-xs font-semibold whitespace-nowrap',
+                mockMode
+                  ? 'border-warning-text/30 bg-warning-bg text-warning-text'
+                  : 'border-success-text/30 bg-success-bg text-success-text',
+              )}
+            >
+              {mockMode ? 'MODE SIMULASI (MSW)' : 'LIVE FASTAPI'}
+            </span>
+          </div>
         </header>
 
         {toasts.length > 0 ? (
