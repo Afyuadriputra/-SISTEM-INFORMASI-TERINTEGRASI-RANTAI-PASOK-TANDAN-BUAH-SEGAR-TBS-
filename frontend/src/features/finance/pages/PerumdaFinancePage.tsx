@@ -4,11 +4,14 @@ import { Badge, Button, Input, Select } from '@/components/atoms';
 import { FormField, PolicyNoticeBanner, StatusIndicator } from '@/components/molecules';
 import { DataTable, FormSection, KPIGrid, StateFeedbackCard, type KPIItem } from '@/components/organisms';
 import { DataManagementTemplate } from '@/components/templates';
+import { useContracts, useDeliveryOrders } from '@/features/logistics/api/logisticsApi';
+import { useCooperatives } from '@/features/master-data/api/masterDataApi';
 import {
   useReconciliations,
   useUploadEvidenceFile,
 } from '@/features/reconciliation/api/reconciliationApi';
 import { hasPermission, type AuthenticatedUser } from '@/lib/auth/permissions';
+import { isMockApiMode } from '@/lib/config/env';
 import { formatCalendarOrWibDate, formatIdr } from '@/lib/decimal/precision';
 import { ApiError } from '@/lib/errors/errorCatalog';
 import { useUiStore } from '@/lib/state/uiStore';
@@ -33,6 +36,9 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
 
   const invoicesQuery = useInvoices();
   const recsQuery = useReconciliations();
+  const contractsQuery = useContracts(hasPermission(user, 'contracts.read'));
+  const dosQuery = useDeliveryOrders(undefined, hasPermission(user, 'delivery_orders.read'));
+  const coopsQuery = useCooperatives();
   const createInvoice = useCreateInvoiceDraft();
   const verifyInvoice = useVerifyInvoice();
   const issueInvoice = useIssueInvoice();
@@ -42,6 +48,9 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
 
   const invoices = invoicesQuery.data?.data ?? [];
   const recs = recsQuery.data?.data ?? [];
+  const contracts = contractsQuery.data?.data ?? [];
+  const deliveryOrders = dosQuery.data?.data ?? [];
+  const cooperatives = coopsQuery.data?.data ?? [];
 
   const [invRecId, setInvRecId] = useState('');
   const [invType, setInvType] = useState<'ACCOUNTS_RECEIVABLE' | 'ACCOUNTS_PAYABLE'>(
@@ -55,7 +64,10 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
     'BANK_TRANSFER_MANUAL',
   );
   const [payRef, setPayRef] = useState('');
-  const [proofFileId, setProofFileId] = useState('a0000000-0000-4000-8000-000000000903');
+  const [proofFileId, setProofFileId] = useState(
+    isMockApiMode() ? 'a0000000-0000-4000-8000-000000000903' : '',
+  );
+  const [uploadedProofName, setUploadedProofName] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const selectedInvoiceForPay =
@@ -101,14 +113,41 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
       setActionError('Pilih kasus rekonsiliasi terlebih dahulu.');
       return;
     }
+    const chosenRec = recs.find((r) => r.id === chosenRecId);
+    const deliveryOrder = deliveryOrders.find((d) => d.id === chosenRec?.delivery_order_id);
+    const contract = contracts.find((c) => c.id === deliveryOrder?.contract_id);
+    const contractWithParties =
+      contract ??
+      contracts.find((c) => c.perumda_role === 'SELLER' || c.perumda_role === 'BUYER') ??
+      contracts[0];
+    const perumdaPartyId =
+      contractWithParties?.perumda_role === 'BUYER'
+        ? contractWithParties.buyer_party_id
+        : (contractWithParties?.seller_party_id ??
+          invoices.find((i) => i.invoice_type === 'ACCOUNTS_RECEIVABLE')?.creditor_party_id ??
+          (isMockApiMode() ? '10000000-0000-4000-8000-000000000100' : ''));
+    const millCompanyPartyId =
+      contractWithParties?.perumda_role === 'BUYER'
+        ? contractWithParties.seller_party_id
+        : (contractWithParties?.buyer_party_id ??
+          invoices.find((i) => i.invoice_type === 'ACCOUNTS_RECEIVABLE')?.debtor_party_id ??
+          (isMockApiMode() ? '10000000-0000-4000-8000-000000000120' : ''));
+    const coopPartyId =
+      cooperatives.find((co) => co.id === deliveryOrder?.cooperative_id)?.party_id ??
+      cooperatives[0]?.party_id ??
+      (isMockApiMode() ? '10000000-0000-4000-8000-000000000110' : '');
+    if (!perumdaPartyId || !millCompanyPartyId || !coopPartyId) {
+      setActionError('Data party entitas keuangan belum tersedia dari server.');
+      return;
+    }
+
     try {
       const res = await createInvoice.mutateAsync({
         invoice_type: invType,
-        creditor_party_id: '10000000-0000-4000-8000-000000000100',
+        creditor_party_id:
+          invType === 'ACCOUNTS_RECEIVABLE' ? perumdaPartyId : coopPartyId,
         debtor_party_id:
-          invType === 'ACCOUNTS_RECEIVABLE'
-            ? '10000000-0000-4000-8000-000000000120'
-            : '10000000-0000-4000-8000-000000000110',
+          invType === 'ACCOUNTS_RECEIVABLE' ? millCompanyPartyId : perumdaPartyId,
         reconciliation_case_id: chosenRecId,
         invoice_date: invDate,
         due_date: '2026-11-25',
@@ -128,9 +167,11 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
   const handleProofUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setActionError(null);
     try {
       const res = await uploadFile.mutateAsync({ classification: 'PAYMENT_PROOF', file });
       setProofFileId(res.data.id);
+      setUploadedProofName(res.data.original_filename);
       pushToast({ tone: 'info', title: `Bukti transfer ${res.data.original_filename} terunggah.` });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -144,6 +185,10 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
     setActionError(null);
     if (!selectedInvoiceForPay || !payRef.trim()) {
       setActionError('Pilih faktur dan isi referensi bukti transfer/kwitansi.');
+      return;
+    }
+    if (!proofFileId.trim()) {
+      setActionError('Unggah bukti transfer atau kwitansi terlebih dahulu (PAY_PROOF_REQUIRED).');
       return;
     }
     const amt = (payAmount || selectedInvoiceForPay.total_amount).trim();
@@ -329,7 +374,7 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
                     className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-md border border-border-control bg-surface-default px-3.5 text-xs font-semibold text-ink-primary hover:bg-surface-subtle"
                   >
                     <FileUp aria-hidden="true" className="h-4 w-4 text-primary-default" />
-                    <span>Unggah Bukti Transfer</span>
+                    <span>{uploadFile.isPending ? 'Mengunggah Bukti...' : uploadedProofName ? `Bukti: ${uploadedProofName}` : 'Unggah Bukti Transfer'}</span>
                     <input
                       id="pay-proof"
                       type="file"
@@ -341,6 +386,7 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
                   <Button
                     type="submit"
                     isLoading={recordPayment.isPending}
+                    disabled={uploadFile.isPending}
                     leadingIcon={<Receipt aria-hidden="true" className="h-4 w-4" />}
                   >
                     Catat Bukti Pembayaran
@@ -419,7 +465,7 @@ export function PerumdaFinancePage({ user }: { readonly user: AuthenticatedUser 
               header: 'Aksi Keuangan',
               render: (inv) => (
                 <div className="flex flex-wrap gap-2">
-                  {inv.status === 'DRAFT' && canVerifyInv ? (
+                  {(inv.status === 'DRAFT' || inv.status === 'PENDING_VERIFICATION') && canVerifyInv ? (
                     <Button
                       size="sm"
                       variant="outline"
