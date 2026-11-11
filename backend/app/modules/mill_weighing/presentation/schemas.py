@@ -95,7 +95,7 @@ class MillTicketListEnvelope(StrictContractModel):
 class MillTicketEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: MillWeighingTicketDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
