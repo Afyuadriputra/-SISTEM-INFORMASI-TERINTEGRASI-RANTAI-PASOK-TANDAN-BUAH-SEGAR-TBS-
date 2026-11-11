@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, Sprout } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { DemoModeBanner } from '@/components/molecules';
 
 export interface AuthTemplateProps {
   readonly children: ReactNode;
@@ -8,8 +9,10 @@ export interface AuthTemplateProps {
 
 export function AuthTemplate({ children }: AuthTemplateProps) {
   return (
-    <div className="flex min-h-screen flex-col justify-between bg-canvas px-4 py-6 sm:px-6">
-      <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
+    <div className="flex min-h-screen flex-col justify-between bg-canvas">
+      <DemoModeBanner variant="bar" />
+      <div className="flex flex-1 flex-col justify-between px-4 py-6 sm:px-6">
+        <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
         <Link
           to="/"
           className="inline-flex min-h-[44px] items-center gap-2 text-sm font-semibold text-primary-default hover:text-brand-hover"
@@ -30,6 +33,7 @@ export function AuthTemplate({ children }: AuthTemplateProps) {
       <p className="text-center text-xs text-text-muted">
         Portal Internal Terbatas Unit Agro Niaga | Akses dicatat pada audit log keamanan.
       </p>
+      </div>
     </div>
   );
 }
