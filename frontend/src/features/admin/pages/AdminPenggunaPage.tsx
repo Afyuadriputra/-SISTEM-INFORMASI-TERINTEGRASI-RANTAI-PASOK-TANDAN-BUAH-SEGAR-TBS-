@@ -529,7 +529,7 @@ export function AdminPenggunaPage({ user }: { readonly user: AuthenticatedUser }
       }
     >
       <div className="grid gap-6 xl:grid-cols-3">
-        <div className="xl:col-span-2">
+        <div className="min-w-0 xl:col-span-2">
           {usersQuery.isError ? (
             <StateFeedbackCard
               variant="error"
@@ -550,7 +550,7 @@ export function AdminPenggunaPage({ user }: { readonly user: AuthenticatedUser }
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <div className="rounded-xl border border-border-subtle bg-surface-default p-5 shadow-sm">
             <h2 className="text-base font-bold text-ink-primary">
               Parameter Aturan Berversi (Append-Only)
@@ -650,7 +650,7 @@ export function AdminPenggunaPage({ user }: { readonly user: AuthenticatedUser }
                   className="rounded-md border border-border-subtle bg-surface-subtle p-2.5 text-xs"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-1">
-                    <span className="font-mono font-bold text-ink-primary">
+                    <span className="break-all font-mono font-bold text-ink-primary">
                       {rule.rule_code} v{rule.version_number}
                     </span>
                     <StatusIndicator status={rule.approval_status} />
