@@ -71,7 +71,7 @@ export function useReserveQuota() {
   });
 }
 
-export function useDeliveryOrders(filters?: { status?: string }) {
+export function useDeliveryOrders(filters?: { status?: string }, enabled = true) {
   return useQuery({
     queryKey: queryKeys.deliveryOrders.list(filters),
     queryFn: () =>
@@ -79,6 +79,7 @@ export function useDeliveryOrders(filters?: { status?: string }) {
         path: '/api/v1/delivery-orders',
         query: { status: filters?.status || undefined, page_size: 50 },
       }),
+    enabled,
   });
 }
 
