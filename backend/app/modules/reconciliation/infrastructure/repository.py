@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from collections.abc import Sequence
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import delete, func, select
+from sqlalchemy import Row, Select, delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
@@ -66,10 +67,8 @@ def _policy_from_rule_status(approval_status: str) -> PolicyClassification:
     return PolicyClassification.SIMULATION_ONLY
 
 
-async def _fetch_case_detail(
-    session: AsyncSession, reconciliation_id: UUID
-) -> ReconciliationCaseEntity | None:
-    stmt = (
+def _case_detail_stmt() -> Select[tuple[ReconciliationCaseModel, str]]:
+    return (
         select(ReconciliationCaseModel, DeliveryOrderModel.delivery_order_number)
         .join(
             DeliveryOrderModel,
@@ -79,23 +78,14 @@ async def _fetch_case_detail(
             selectinload(ReconciliationCaseModel.dispute_reviews),
             selectinload(ReconciliationCaseModel.farmer_allocations),
         )
-        .where(ReconciliationCaseModel.id == reconciliation_id)
     )
-    row_tuple = (await session.execute(stmt)).first()
-    if row_tuple is None:
-        return None
-    row, do_number = row_tuple
 
-    farmer_ids = {a.farmer_id for a in row.farmer_allocations}
-    farmer_names: dict[UUID, str] = {}
-    if farmer_ids:
-        f_rows = (
-            await session.execute(
-                select(FarmerModel.id, FarmerModel.full_name).where(FarmerModel.id.in_(farmer_ids))
-            )
-        ).all()
-        farmer_names = {fid: fname for fid, fname in f_rows}
 
+def _map_case_row(
+    row: ReconciliationCaseModel,
+    do_number: str,
+    farmer_names: dict[UUID, str],
+) -> ReconciliationCaseEntity:
     reviews = tuple(
         DisputeReviewEntity(
             id=r.id,
@@ -148,6 +138,36 @@ async def _fetch_case_detail(
         dispute_reviews=reviews,
         farmer_allocations=allocs,
     )
+
+
+async def _hydrate_case_rows(
+    session: AsyncSession,
+    row_tuples: Sequence[Row[tuple[ReconciliationCaseModel, str]]],
+) -> list[ReconciliationCaseEntity]:
+    if not row_tuples:
+        return []
+    farmer_ids = {a.farmer_id for row, _ in row_tuples for a in row.farmer_allocations}
+    farmer_names: dict[UUID, str] = {}
+    if farmer_ids:
+        f_rows = (
+            await session.execute(
+                select(FarmerModel.id, FarmerModel.full_name).where(FarmerModel.id.in_(farmer_ids))
+            )
+        ).all()
+        farmer_names = {fid: fname for fid, fname in f_rows}
+    return [_map_case_row(row, do_number, farmer_names) for row, do_number in row_tuples]
+
+
+async def _fetch_case_detail(
+    session: AsyncSession, reconciliation_id: UUID
+) -> ReconciliationCaseEntity | None:
+    row_tuples = (
+        await session.execute(
+            _case_detail_stmt().where(ReconciliationCaseModel.id == reconciliation_id)
+        )
+    ).all()
+    items = await _hydrate_case_rows(session, row_tuples)
+    return items[0] if items else None
 
 
 async def _load_active_tolerance_rule(
@@ -216,27 +236,21 @@ class SqlAlchemyReconciliationRepository:
                     )
                 ).scalar_one()
             )
-            ids = (
-                (
-                    await session.execute(
-                        select(ReconciliationCaseModel.id)
-                        .where(*filters)
-                        .order_by(
-                            ReconciliationCaseModel.created_at.desc(),
-                            ReconciliationCaseModel.id.desc(),
-                        )
-                        .offset((page - 1) * page_size)
-                        .limit(page_size)
+            if total == 0:
+                return [], 0
+            row_tuples = (
+                await session.execute(
+                    _case_detail_stmt()
+                    .where(*filters)
+                    .order_by(
+                        ReconciliationCaseModel.created_at.desc(),
+                        ReconciliationCaseModel.id.desc(),
                     )
+                    .offset((page - 1) * page_size)
+                    .limit(page_size)
                 )
-                .scalars()
-                .all()
-            )
-            items: list[ReconciliationCaseEntity] = []
-            for cid in ids:
-                ent = await _fetch_case_detail(session, cid)
-                if ent is not None:
-                    items.append(ent)
+            ).all()
+            items = await _hydrate_case_rows(session, row_tuples)
             return items, total
 
     async def get_case_by_id(self, reconciliation_id: UUID) -> ReconciliationCaseEntity | None:
@@ -730,7 +744,11 @@ class SqlAlchemyReconciliationRepository:
                             DeliveryOrderLineModel.delivery_order_id == do.id,
                             DeliveryOrderLineModel.allocation_status == "ACTIVE",
                         )
-                        .order_by(DeliveryOrderLineModel.created_at.asc())
+                        .order_by(
+                            DeliveryOrderLineModel.created_at.asc(),
+                            TbsReceiptModel.receipt_number.asc(),
+                            DeliveryOrderLineModel.id.asc(),
+                        )
                     )
                 ).all()
 
@@ -768,7 +786,7 @@ class SqlAlchemyReconciliationRepository:
                 )
 
                 entities: list[FarmerSettlementAllocationEntity] = []
-                for item in computed:
+                for idx, item in enumerate(computed):
                     aid = uuid4()
                     session.add(
                         FarmerSettlementAllocationModel(
@@ -785,7 +803,7 @@ class SqlAlchemyReconciliationRepository:
                             status=row_status,
                             policy_classification=policy_cls,
                             approved_at=now if mode == AllocationMode.FINAL else None,
-                            created_at=now,
+                            created_at=now + timedelta(microseconds=idx),
                         )
                     )
                     entities.append(
