@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.core.logging import request_id_ctx
-from app.core.schemas import build_pagination_meta
+from app.core.schemas import SimpleSuccessMeta, build_pagination_meta
 from app.modules.identity_access.domain.entities import AuthenticatedPrincipal, RoleCode
 from app.modules.identity_access.presentation.dependencies import require_access
 from app.modules.master_data.application.use_cases import MasterDataService
@@ -425,7 +425,7 @@ async def create_mill(
     )
     return MillEnvelope(
         data=mill_to_dto(created),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -453,7 +453,7 @@ async def get_mill(
     mill = await service.get_mill(principal=principal, mill_id=mill_id)
     return MillEnvelope(
         data=mill_to_dto(mill),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
@@ -493,7 +493,7 @@ async def update_mill(
     )
     return MillEnvelope(
         data=mill_to_dto(updated),
-        meta=None,
+        meta=SimpleSuccessMeta(),
         request_id=request_id_ctx.get(),
     )
 
