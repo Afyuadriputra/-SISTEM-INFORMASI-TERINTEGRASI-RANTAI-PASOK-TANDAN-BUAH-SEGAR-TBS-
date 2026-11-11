@@ -10,10 +10,29 @@ const SCREENSHOT_DIR =
   process.env.PLAYWRIGHT_SCREENSHOT_DIR ||
   path.resolve(__dirname, '../../playwright-screenshots');
 
-const LIVE_CONTRACT_ID = '70000000-0000-4000-8000-000000000001';
-const PUBLIC_MILL_ID = '40000000-0000-4000-8000-000000000001';
-const PRIVATE_MILL_ID = '40000000-0000-4000-8000-000000000003';
-const LIVE_PASSWORD = process.env.E2E_PASSWORD ?? 'Simulasi123!';
+const LIVE_CONTRACT_ID = process.env.E2E_CONTRACT_ID ?? '71000000-0000-4000-8000-000000000001';
+const LIVE_CONTRACT_MILL_ID = process.env.E2E_CONTRACT_MILL_ID ?? '41000000-0000-4000-8000-000000000001';
+const PRIVATE_MILL_ID = process.env.E2E_PRIVATE_MILL_ID ?? '41000000-0000-4000-8000-000000000003';
+const LIVE_PASSWORD = process.env.E2E_PASSWORD ?? 'UatSimulasi!2026';
+const ACTOR_PREFIX = process.env.E2E_ACTOR_PREFIX ?? 'uat';
+const ADMIN_USER = `${ACTOR_PREFIX}_sys_admin_01`;
+const KOP_USER = `${ACTOR_PREFIX}_kop_op_01`;
+const DIR_USER = `${ACTOR_PREFIX}_director_01`;
+
+async function resolvePublicMillId(page: Page): Promise<string> {
+  if (process.env.E2E_PUBLIC_MILL_ID) {
+    return process.env.E2E_PUBLIC_MILL_ID;
+  }
+  const res = await page.request.get('/api/v1/public/mills');
+  if (res.ok()) {
+    const body = (await res.json()) as { data?: Array<{ id?: string }> };
+    const firstId = body.data?.[0]?.id;
+    if (firstId) {
+      return firstId;
+    }
+  }
+  return '41000000-0000-4000-8000-000000000001';
+}
 
 fs.mkdirSync(SCREENSHOT_DIR, { recursive: true });
 
@@ -89,6 +108,7 @@ async function logoutThroughUi(page: Page) {
     await page.getByRole('button', { name: /Keluar Sesi/i }).first().click();
   }
   await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByLabel(/Username/i)).toBeVisible({ timeout: 10_000 });
 }
 
 test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () => {
@@ -111,6 +131,7 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
       }
     });
 
+    const publicMillId = await resolvePublicMillId(page);
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/');
     await expect(
@@ -127,14 +148,16 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
 
     for (const route of [
       '/harga-tbs',
-      `/pks/${PUBLIC_MILL_ID}`,
+      `/pks/${publicMillId}`,
       '/lokasi-pks',
       '/tentang',
       '/kemitraan',
       '/kontak',
     ]) {
       await page.goto(route);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
+      await expect(page.locator('#main-content, main').first()).toBeVisible({ timeout: 10_000 });
+      await expect(page.getByText(/Memuat halaman\.\.\.|Sedang memuat|Memuat daftar/i)).toHaveCount(0, { timeout: 10_000 });
       await assertNoHorizontalOverflow(page, `${route} 1440px`);
     }
 
@@ -144,7 +167,7 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
 
     // Unpublished private PKS returns safe 404 / error without leaking internal mill name
     await page.goto(`/pks/${PRIVATE_MILL_ID}`);
-    await expect(page.getByText(/PKS Mitra Internal Rahasia/i)).toHaveCount(0);
+    await expect(page.getByText(/PKS Rahasia Internal UAT|PKS Mitra Internal Rahasia/i)).toHaveCount(0);
 
     // Mobile 375px responsive + axe audit
     await page.setViewportSize({ width: 375, height: 812 });
@@ -191,11 +214,11 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
     await expect(page.getByText(/Akses Cepat Simulasi/i)).toHaveCount(0);
 
     // Generic invalid password error
-    await loginThroughUi(page, 'sim_sys_admin_01', 'WrongPass999!');
+    await loginThroughUi(page, ADMIN_USER, 'WrongPass999!');
     await expect(page.getByRole('alert')).toContainText(/Username atau kata sandi tidak sesuai/i);
 
     // Real FastAPI login as SYSTEM_ADMIN
-    await loginThroughUi(page, 'sim_sys_admin_01');
+    await loginThroughUi(page, ADMIN_USER);
     await expect(page).toHaveURL(/\/app\/admin$/);
     await expect(
       page.getByRole('heading', { name: /Dashboard Administrasi Teknis & Kesehatan Sistem/i }),
@@ -220,7 +243,7 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
       page.getByRole('heading', { name: /Manajemen Akun, Cakupan RBAC & Aturan Berversi/i }),
     ).toBeVisible();
     await expect(
-      page.locator('#main-content').getByText('sim_sys_admin_01', { exact: true }),
+      page.locator('#main-content').getByText(ADMIN_USER, { exact: true }),
     ).toBeVisible();
 
     // SYSTEM_ADMIN cannot issue CONFIRMED production policy (BR-SYS-002 -> 403/400 block)
@@ -243,7 +266,7 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
     await logoutThroughUi(page);
 
     // Cooperative operator flow: Mobile receiving screen QA + create draft -> weigh -> validate -> e-DO
-    await loginThroughUi(page, 'sim_kop_op_01');
+    await loginThroughUi(page, KOP_USER);
     await expect(page).toHaveURL(/\/app\/koperasi$/);
 
     await page.setViewportSize({ width: 375, height: 812 });
@@ -279,15 +302,22 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
     ).toBeVisible();
     const trmCheckbox = page
       .locator('label')
-      .filter({ has: page.locator('input[type="checkbox"]:not([disabled])') })
+      .filter({ hasText: /Tervalidasi/i })
       .first()
       .locator('input[type="checkbox"]');
     await trmCheckbox.check();
+
+    const millField = page.locator('#edo-mill');
+    if ((await millField.locator(`option[value="${LIVE_CONTRACT_MILL_ID}"]`).count()) > 0) {
+      await millField.selectOption(LIVE_CONTRACT_MILL_ID);
+    }
 
     const contractField = page.getByLabel(/Referensi Kontrak Tujuan/i);
     const tagName = await contractField.evaluate((el) => el.tagName.toLowerCase());
     if (tagName === 'input') {
       await contractField.fill(LIVE_CONTRACT_ID);
+    } else if ((await contractField.locator(`option[value="${LIVE_CONTRACT_ID}"]`).count()) > 0) {
+      await contractField.selectOption(LIVE_CONTRACT_ID);
     }
     await page.getByRole('button', { name: /Susun Draf e-DO/i }).click();
     await expect(page.getByText(/Draf e-DO .* dibuat/i).first()).toBeVisible();
@@ -297,7 +327,7 @@ test.describe('F11 End-to-End Integration, Responsive & WCAG 2.2 AA Audit', () =
     await logoutThroughUi(page);
 
     // Director executive dashboard audit
-    await loginThroughUi(page, 'sim_director_01');
+    await loginThroughUi(page, DIR_USER);
     await expect(page).toHaveURL(/\/app\/direksi$/);
     await expect(
       page.getByRole('heading', { name: /Dashboard Eksekutif Direksi/i }),
