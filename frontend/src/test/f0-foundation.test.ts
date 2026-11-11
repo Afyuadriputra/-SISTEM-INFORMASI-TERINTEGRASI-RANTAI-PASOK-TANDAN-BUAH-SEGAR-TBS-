@@ -8,7 +8,11 @@ import {
   isNonApproverAdmin,
 } from '@/lib/auth/permissions';
 import { loginWithCredentials, logoutSession } from '@/lib/auth/session';
-import { assertStrictRealModeNoMockFallback, getFrontendConfig } from '@/lib/config/env';
+import {
+  assertStrictRealModeNoMockFallback,
+  getFrontendConfig,
+  isDemoBannerEnabled,
+} from '@/lib/config/env';
 import {
   computeNettoPreview,
   computeReconciliationDiffPreview,
@@ -41,6 +45,9 @@ describe('F0 Foundation: Config, Decimal Precision & Error Catalog', () => {
     });
     expect(() => getFrontendConfig({ VITE_API_MODE: 'invalid' })).toThrow();
     expect(() => assertStrictRealModeNoMockFallback()).not.toThrow();
+    expect(isDemoBannerEnabled({})).toBe(false);
+    expect(isDemoBannerEnabled({ VITE_DEMO_BANNER: 'false' })).toBe(false);
+    expect(isDemoBannerEnabled({ VITE_DEMO_BANNER: 'true' })).toBe(true);
   });
 
   it('formats decimal precision exactly with zero float drift and WIB timestamps', () => {
