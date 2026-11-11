@@ -7,16 +7,19 @@ import json
 import time
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
-from uuid import uuid4
+from typing import Any
+from uuid import UUID, uuid4
 
 import httpx
+import jsonschema
 import pytest
 import yaml
 from app.core.config import Settings
 from app.core.database import build_async_engine, build_session_factory, dispose_database
 from app.core.exceptions import ERROR_CATALOG_DEFAULTS, ErrorCode
-from app.core.system_rules import seed_baseline_system_rules
+from app.core.system_rules import RULE_RECONCILIATION_TOLERANCE_ID, seed_baseline_system_rules
 from app.main import create_app
 from app.modules.identity_access.domain.entities import RoleCode, ScopeType
 from app.modules.identity_access.infrastructure.models import (
@@ -37,8 +40,9 @@ from app.modules.pricing.infrastructure.models import (
     deterministic_source_id,
     seed_pricing_catalog,
 )
+from app.modules.reconciliation.infrastructure.models import ReconciliationCaseModel
 from redis.asyncio import Redis
-from sqlalchemy import text
+from sqlalchemy import event, text
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 CONTRACTS_DIR = REPO_ROOT / "contracts"
@@ -709,3 +713,594 @@ async def test_b11_concurrent_load_and_postgresql_explain_analyze(b11_env: dict)
             ).scalar_one()
             exec_ms = float(plan_rows[0]["Execution Time"])
             assert exec_ms < 250.0
+
+
+def _assert_openapi_response_valid(
+    spec: dict[str, Any],
+    *,
+    method: str,
+    path_tmpl: str,
+    response: httpx.Response,
+    expected_status: int = 200,
+) -> dict[str, Any]:
+    assert response.status_code == expected_status, (
+        f"{method} {path_tmpl} returned {response.status_code}: {response.text}"
+    )
+    op = spec["paths"][path_tmpl][method.lower()]
+    resp_spec = op["responses"][str(expected_status)]
+    if "$ref" in resp_spec:
+        resp_spec = spec["components"]["responses"][resp_spec["$ref"].split("/")[-1]]
+    schema = dict(resp_spec["content"]["application/json"]["schema"])
+    schema["components"] = spec["components"]
+    payload: dict[str, Any] = response.json()
+    errors = list(
+        jsonschema.Draft202012Validator(
+            schema, format_checker=jsonschema.FormatChecker()
+        ).iter_errors(payload)
+    )
+    assert not errors, f"Schema errors for {method} {path_tmpl}: {[e.message for e in errors]}"
+    return payload
+
+
+@pytest.mark.asyncio
+async def test_b11_remaining_ops_schema_conformance_and_n1_budget(b11_env: dict) -> None:
+    """Exercise all remaining 2xx OpenAPI routes, validate Draft202012 schemas, & bound SQL queries."""
+    spec: dict[str, Any] = yaml.safe_load(
+        (CONTRACTS_DIR / "openapi.v1.yaml").read_text(encoding="utf-8")
+    )
+    app = b11_env["app"]
+    transport = httpx.ASGITransport(app=app)
+    anon = httpx.AsyncClient(transport=transport, base_url="http://testserver")
+
+    ops1, c_ops1 = await _login(transport, username="ops_1_e2e", password="E2ePass#2026")
+    ops2, c_ops2 = await _login(transport, username="ops_2_e2e", password="E2ePass#2026")
+    dir_c, c_dir = await _login(transport, username="dir_e2e", password="E2ePass#2026")
+    coop_c, c_coop = await _login(transport, username="coop_e2e", password="E2ePass#2026")
+    sys_c, c_sys = await _login(transport, username="sys_e2e", password="E2ePass#2026")
+    pks_c: httpx.AsyncClient | None = None
+
+    try:
+        # 1. Health, Admin governance & Master Data list/detail/update routes
+        _assert_openapi_response_valid(
+            spec, method="GET", path_tmpl="/health/live", response=await anon.get("/health/live")
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/admin/users",
+            response=await sys_c.get("/api/v1/admin/users?page=1&page_size=20"),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/admin/rule-versions",
+            response=await sys_c.get("/api/v1/admin/rule-versions?page=1&page_size=20"),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/cooperatives",
+            response=await ops1.get("/api/v1/cooperatives?page=1&page_size=20"),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/mill-companies",
+            response=await ops1.get("/api/v1/mill-companies?page=1&page_size=20"),
+        )
+
+        farmer = _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/farmers",
+            expected_status=201,
+            response=await coop_c.post(
+                "/api/v1/farmers",
+                headers={"X-CSRF-Token": c_coop},
+                json={
+                    "farmer_code": "FRM-CONF-1",
+                    "full_name": "Petani Conformance",
+                    "contact_phone": "0813555666",
+                    "cooperative_id": b11_env["coop_id"],
+                },
+            ),
+        )["data"]
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/farmers/{farmer_id}",
+            response=await coop_c.get(f"/api/v1/farmers/{farmer['id']}"),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/farms",
+            expected_status=201,
+            response=await coop_c.post(
+                "/api/v1/farms",
+                headers={"X-CSRF-Token": c_coop},
+                json={
+                    "farmer_id": farmer["id"],
+                    "farm_code": "KBN-CONF-1",
+                    "farm_name": "Kebun Conformance",
+                    "area_hectares": "3.0000",
+                    "village": "Makmur",
+                    "district": "Kerinci",
+                    "latitude": "0.402100",
+                    "longitude": "101.860400",
+                },
+            ),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/farms",
+            response=await coop_c.get(
+                f"/api/v1/farms?page=1&page_size=20&farmer_id={farmer['id']}"
+            ),
+        )
+
+        mill = _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/mills",
+            expected_status=201,
+            response=await ops1.post(
+                "/api/v1/mills",
+                headers={"X-CSRF-Token": c_ops1},
+                json={
+                    "mill_company_id": b11_env["mc_id"],
+                    "mill_code": "PKS-CONF-1",
+                    "mill_name": "PKS Conformance",
+                    "address": "Pelalawan",
+                    "district": "Kerinci",
+                    "regency": "Pelalawan",
+                    "province": "Riau",
+                    "latitude": "0.405000",
+                    "longitude": "101.865000",
+                    "contact_phone": "07611234",
+                    "partnership_status": "ACTIVE",
+                    "is_public": True,
+                },
+            ),
+        )["data"]
+        _assert_openapi_response_valid(
+            spec,
+            method="PATCH",
+            path_tmpl="/api/v1/mills/{mill_id}",
+            response=await ops1.patch(
+                f"/api/v1/mills/{mill['id']}",
+                headers={"X-CSRF-Token": c_ops1},
+                json={"mill_name": "PKS Conformance Updated", "version": mill["version"]},
+            ),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/public/mills/{mill_id}",
+            response=await anon.get(f"/api/v1/public/mills/{mill['id']}"),
+        )
+
+        veh = _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/vehicles",
+            expected_status=201,
+            response=await ops1.post(
+                "/api/v1/vehicles",
+                headers={"X-CSRF-Token": c_ops1},
+                json={
+                    "plate_number": "BM 2222 CNF",
+                    "vehicle_type": "TRUCK",
+                    "nominal_capacity_kg": "15000.000",
+                },
+            ),
+        )["data"]
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/vehicles",
+            response=await ops1.get("/api/v1/vehicles?page=1&page_size=20"),
+        )
+        drv = _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/drivers",
+            expected_status=201,
+            response=await ops1.post(
+                "/api/v1/drivers",
+                headers={"X-CSRF-Token": c_ops1},
+                json={
+                    "full_name": "Sopir Conformance",
+                    "contact_phone": "0812444555",
+                    "driver_reference": "SIM-CNF-01",
+                },
+            ),
+        )["data"]
+
+        assert (
+            await sys_c.post(
+                "/api/v1/admin/users",
+                headers={"X-CSRF-Token": c_sys},
+                json={
+                    "username": "pks_conf_op",
+                    "password": "PksConfPass#2026",
+                    "role_code": "MILL_OPERATOR",
+                    "scope_type": "MILL",
+                    "mill_id": mill["id"],
+                },
+            )
+        ).status_code == 201
+        pks_c, c_pks = await _login(transport, username="pks_conf_op", password="PksConfPass#2026")
+
+        # 2. Pricing list/meta/detail/updateDraft + public detail
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/prices/reference-meta",
+            response=await ops1.get("/api/v1/prices/reference-meta"),
+        )
+        now = b11_env["now"]
+        price_draft = _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/prices",
+            expected_status=201,
+            response=await ops1.post(
+                "/api/v1/prices",
+                headers={"X-CSRF-Token": c_ops1},
+                json={
+                    "mill_id": mill["id"],
+                    "price_category_id": str(deterministic_category_id("SWADAYA_STD")),
+                    "source_id": str(deterministic_source_id("MILL_OFFICIAL")),
+                    "price_per_kg": "2800.00",
+                    "effective_from": (now - timedelta(hours=1)).isoformat(),
+                    "effective_until": (now + timedelta(days=5)).isoformat(),
+                },
+            ),
+        )["data"]
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/prices",
+            response=await ops1.get("/api/v1/prices?page=1&page_size=20"),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/prices/{price_quote_id}",
+            response=await ops1.get(f"/api/v1/prices/{price_draft['id']}"),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="PATCH",
+            path_tmpl="/api/v1/prices/{price_quote_id}",
+            response=await ops1.patch(
+                f"/api/v1/prices/{price_draft['id']}",
+                headers={"X-CSRF-Token": c_ops1},
+                json={"price_per_kg": "2875.00", "version": price_draft["version"]},
+            ),
+        )
+        assert (
+            await ops1.post(
+                f"/api/v1/prices/{price_draft['id']}/submit", headers={"X-CSRF-Token": c_ops1}
+            )
+        ).status_code == 200
+        assert (
+            await ops2.post(
+                f"/api/v1/prices/{price_draft['id']}/verify",
+                headers={"X-CSRF-Token": c_ops2},
+                json={"decision": "APPROVE"},
+            )
+        ).status_code == 200
+        assert (
+            await ops1.post(
+                f"/api/v1/prices/{price_draft['id']}/publish", headers={"X-CSRF-Token": c_ops1}
+            )
+        ).status_code == 200
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/public/prices/{price_quote_id}",
+            response=await anon.get(f"/api/v1/public/prices/{price_draft['id']}"),
+        )
+
+        # 3. Receipts cancel + listReceipts + Contracts list/detail
+        farm_id = (
+            await coop_c.get(f"/api/v1/farms?page=1&page_size=20&farmer_id={farmer['id']}")
+        ).json()["data"][0]["id"]
+        rcp_cancel = (
+            await coop_c.post(
+                "/api/v1/receipts",
+                headers={"X-CSRF-Token": c_coop, "Idempotency-Key": str(uuid4())},
+                json={
+                    "farmer_id": farmer["id"],
+                    "farm_id": farm_id,
+                    "received_at": now.isoformat(),
+                },
+            )
+        ).json()["data"]
+        _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/receipts/{receipt_id}/cancel",
+            response=await coop_c.post(
+                f"/api/v1/receipts/{rcp_cancel['id']}/cancel",
+                headers={"X-CSRF-Token": c_coop},
+                json={
+                    "reason": "Pembatalan uji conformance B11.1",
+                    "version": rcp_cancel["version"],
+                },
+            ),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/receipts",
+            response=await coop_c.get("/api/v1/receipts?page=1&page_size=20"),
+        )
+
+        ctr = (
+            await ops1.post(
+                "/api/v1/contracts",
+                headers={"X-CSRF-Token": c_ops1},
+                json={
+                    "mill_id": mill["id"],
+                    "contract_number": "KTR-CONF-001",
+                    "start_date": now.date().isoformat(),
+                    "end_date": (now.date() + timedelta(days=30)).isoformat(),
+                    "price_rule_type": "FIXED",
+                    "agreed_price_per_kg": "2875.00",
+                    "business_model_code": "PRINCIPAL",
+                    "perumda_role": "SELLER",
+                    "seller_party_id": b11_env["p_perumda"],
+                    "buyer_party_id": b11_env["p_mc"],
+                    "payment_terms": "14 hari",
+                    "initial_quota_kg": "50000.000",
+                },
+            )
+        ).json()["data"]
+        assert (
+            await dir_c.post(
+                f"/api/v1/contracts/{ctr['id']}/approve", headers={"X-CSRF-Token": c_dir}
+            )
+        ).status_code == 200
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/contracts",
+            response=await ops1.get("/api/v1/contracts?page=1&page_size=20"),
+        )
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/contracts/{contract_id}",
+            response=await ops1.get(f"/api/v1/contracts/{ctr['id']}"),
+        )
+
+        # 4. Seed 3 e-DOs + 3 Mill Tickets + 3 Reconciliations (including POST /calculate)
+        png_bytes = b"\x89PNG\r\n\x1a\n" + b"0" * 64
+        do_ids: list[str] = []
+        for idx in range(3):
+            rcp = (
+                await coop_c.post(
+                    "/api/v1/receipts",
+                    headers={"X-CSRF-Token": c_coop, "Idempotency-Key": str(uuid4())},
+                    json={
+                        "farmer_id": farmer["id"],
+                        "farm_id": farm_id,
+                        "received_at": now.isoformat(),
+                    },
+                )
+            ).json()["data"]
+            assert (
+                await coop_c.post(
+                    f"/api/v1/receipts/{rcp['id']}/weighing",
+                    headers={"X-CSRF-Token": c_coop},
+                    json={
+                        "gross_weight_kg": "12000.000",
+                        "tare_weight_kg": "2000.000",
+                        "version": rcp["version"],
+                    },
+                )
+            ).status_code == 200
+            assert (
+                await coop_c.post(
+                    f"/api/v1/receipts/{rcp['id']}/validate", headers={"X-CSRF-Token": c_coop}
+                )
+            ).status_code == 200
+            do = (
+                await coop_c.post(
+                    "/api/v1/delivery-orders",
+                    headers={"X-CSRF-Token": c_coop},
+                    json={
+                        "mill_id": mill["id"],
+                        "contract_id": ctr["id"],
+                        "vehicle_id": veh["id"],
+                        "driver_id": drv["id"],
+                        "receipt_ids": [rcp["id"]],
+                    },
+                )
+            ).json()["data"]
+            do_issued = (
+                await coop_c.post(
+                    f"/api/v1/delivery-orders/{do['id']}/issue",
+                    headers={"X-CSRF-Token": c_coop, "Idempotency-Key": str(uuid4())},
+                    json={"version": do["version"], "confirm_lock_allocations": True},
+                )
+            ).json()["data"]
+            assert (
+                await coop_c.post(
+                    f"/api/v1/delivery-orders/{do['id']}/status",
+                    headers={"X-CSRF-Token": c_coop},
+                    json={"target_status": "IN_TRANSIT", "version": do_issued["version"]},
+                )
+            ).status_code == 200
+            assert (
+                await pks_c.post(
+                    "/api/v1/delivery-orders/verify-qr",
+                    headers={"X-CSRF-Token": c_pks},
+                    json={"qr_token_or_edo_number": do_issued["qr_verification_token"]},
+                )
+            ).status_code == 200
+            proof = (
+                await pks_c.post(
+                    "/api/v1/files",
+                    headers={"X-CSRF-Token": c_pks},
+                    data={"classification": "MILL_TICKET_PROOF"},
+                    files={"file": (f"wb-cnf-{idx}.png", png_bytes, "image/png")},
+                )
+            ).json()["data"]
+            tkt = (
+                await pks_c.post(
+                    "/api/v1/mill-tickets",
+                    headers={"X-CSRF-Token": c_pks, "Idempotency-Key": str(uuid4())},
+                    json={
+                        "delivery_order_id": do["id"],
+                        "ticket_number": f"WB-CNF-{idx + 1}",
+                        "gross_weight_kg": "14900.000",
+                        "tare_weight_kg": "5000.000",
+                        "weighed_at": now.isoformat(),
+                        "proof_file_id": proof["id"],
+                        "grading_items": [],
+                    },
+                )
+            ).json()["data"]
+            assert (
+                await pks_c.post(
+                    f"/api/v1/mill-tickets/{tkt['id']}/verify", headers={"X-CSRF-Token": c_pks}
+                )
+            ).status_code == 200
+            do_ids.append(do["id"])
+
+        for did in do_ids[:2]:
+            assert (
+                await ops1.post(
+                    "/api/v1/reconciliations",
+                    headers={"X-CSRF-Token": c_ops1, "Idempotency-Key": str(uuid4())},
+                    json={"delivery_order_id": did},
+                )
+            ).status_code == 201
+
+        ops_uid = UUID((await ops1.get("/api/v1/auth/me")).json()["data"]["id"])
+        ready_case_id = uuid4()
+        async with b11_env["sf"]() as session:
+            async with session.begin():
+                session.add(
+                    ReconciliationCaseModel(
+                        id=ready_case_id,
+                        delivery_order_id=UUID(do_ids[2]),
+                        mill_ticket_id=None,
+                        revision_number=1,
+                        origin_weight_kg=Decimal("10000.000"),
+                        mill_weight_kg=Decimal("0.000"),
+                        difference_weight_kg=Decimal("0.000"),
+                        difference_percent=Decimal("0.0000"),
+                        tolerance_percent=Decimal("1.5000"),
+                        rule_version_id=RULE_RECONCILIATION_TOLERANCE_ID,
+                        tolerance_policy_classification="SIMULATION_ONLY",
+                        is_negative_difference=False,
+                        status="READY",
+                        is_current=True,
+                        agreed_settlement_weight_kg=None,
+                        calculated_at=None,
+                        resolved_at=None,
+                        created_by=ops_uid,
+                        created_at=now,
+                    )
+                )
+
+        calc_resp = await ops1.post(
+            f"/api/v1/reconciliations/{ready_case_id}/calculate",
+            headers={"X-CSRF-Token": c_ops1, "Idempotency-Key": str(uuid4())},
+        )
+        calc_payload = _assert_openapi_response_valid(
+            spec,
+            method="POST",
+            path_tmpl="/api/v1/reconciliations/{reconciliation_id}/calculate",
+            response=calc_resp,
+        )
+        assert calc_payload["data"]["status"] == "MATCHED"
+
+        # 5. List tickets + verify constant query budget (no N+1) on DOs & Reconciliations
+        _assert_openapi_response_valid(
+            spec,
+            method="GET",
+            path_tmpl="/api/v1/mill-tickets",
+            response=await ops1.get("/api/v1/mill-tickets?page=1&page_size=20"),
+        )
+
+        sync_engine = app.state.db_engine.sync_engine
+        captured_sql: list[str] = []
+
+        def _capture_sql(_conn: object, _cursor: object, statement: str, *_args: object) -> None:
+            captured_sql.append(statement)
+
+        event.listen(sync_engine, "before_cursor_execute", _capture_sql)
+        try:
+            captured_sql.clear()
+            do_p1 = _assert_openapi_response_valid(
+                spec,
+                method="GET",
+                path_tmpl="/api/v1/delivery-orders",
+                response=await ops1.get("/api/v1/delivery-orders?page=1&page_size=1"),
+            )
+            do_p1_count = len(captured_sql)
+
+            captured_sql.clear()
+            do_list_payload = _assert_openapi_response_valid(
+                spec,
+                method="GET",
+                path_tmpl="/api/v1/delivery-orders",
+                response=await ops1.get("/api/v1/delivery-orders?page=1&page_size=20"),
+            )
+            do_p3_count = len(captured_sql)
+            do_domain_queries = [
+                q for q in captured_sql if "delivery_order" in q or "tbs_receipt" in q
+            ]
+            assert len(do_p1["data"]) == 1 and len(do_list_payload["data"]) == 3
+            assert do_p3_count == do_p1_count, (
+                f"Expected O(1) SQL count on delivery-orders: p1={do_p1_count}, p3={do_p3_count}"
+            )
+            assert len(do_domain_queries) <= 5, (
+                f"Expected <= 5 DO domain queries, got {len(do_domain_queries)}"
+            )
+
+            captured_sql.clear()
+            rec_p1 = _assert_openapi_response_valid(
+                spec,
+                method="GET",
+                path_tmpl="/api/v1/reconciliations",
+                response=await ops1.get("/api/v1/reconciliations?page=1&page_size=1"),
+            )
+            rec_p1_count = len(captured_sql)
+
+            captured_sql.clear()
+            rec_list_payload = _assert_openapi_response_valid(
+                spec,
+                method="GET",
+                path_tmpl="/api/v1/reconciliations",
+                response=await ops1.get("/api/v1/reconciliations?page=1&page_size=20"),
+            )
+            rec_p3_count = len(captured_sql)
+            rec_domain_queries = [
+                q
+                for q in captured_sql
+                if "reconciliation_cases" in q
+                or "dispute_reviews" in q
+                or "farmer_settlement_allocations" in q
+            ]
+            assert len(rec_p1["data"]) == 1 and len(rec_list_payload["data"]) == 3
+            assert rec_p3_count == rec_p1_count, (
+                f"Expected O(1) SQL count on reconciliations: p1={rec_p1_count}, p3={rec_p3_count}"
+            )
+            assert len(rec_domain_queries) <= 5, (
+                f"Expected <= 5 reconciliation domain queries, got {len(rec_domain_queries)}"
+            )
+        finally:
+            event.remove(sync_engine, "before_cursor_execute", _capture_sql)
+    finally:
+        for client in (anon, ops1, ops2, dir_c, coop_c, sys_c):
+            await client.aclose()
+        if pks_c is not None:
+            await pks_c.aclose()
