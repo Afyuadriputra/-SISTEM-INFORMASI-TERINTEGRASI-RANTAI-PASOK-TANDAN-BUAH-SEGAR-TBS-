@@ -112,21 +112,21 @@ class ContractListEnvelope(StrictContractModel):
 class ContractEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: TradeContractDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
 class QuotaPeriodListEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: list[QuotaPeriodSummaryDto]
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
 class QuotaReservationEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: QuotaReservationDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
