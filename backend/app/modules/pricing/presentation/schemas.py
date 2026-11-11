@@ -102,7 +102,7 @@ class InternalPriceQuoteDto(StrictContractModel):
 class InternalPriceEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: InternalPriceQuoteDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
