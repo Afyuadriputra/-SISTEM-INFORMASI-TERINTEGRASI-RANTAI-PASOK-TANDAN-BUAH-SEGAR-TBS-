@@ -278,7 +278,9 @@ export function MillTicketsPage({ user }: { readonly user: AuthenticatedUser }) 
                   key: 'action',
                   header: 'Verifikasi',
                   render: (t) =>
-                    t.is_current && t.status === 'DRAFT' && canVerify ? (
+                    t.is_current &&
+                    (t.status === 'DRAFT' || t.status === 'SUBMITTED') &&
+                    canVerify ? (
                       <Button
                         size="sm"
                         variant="primary"
