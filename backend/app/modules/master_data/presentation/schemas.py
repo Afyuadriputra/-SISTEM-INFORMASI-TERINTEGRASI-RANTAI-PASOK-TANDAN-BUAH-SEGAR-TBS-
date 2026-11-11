@@ -203,7 +203,7 @@ class MillDto(StrictContractModel):
 class MillEnvelope(StrictContractModel):
     success: Literal[True] = True
     data: MillDto
-    meta: SimpleSuccessMeta | None = None
+    meta: SimpleSuccessMeta
     request_id: str
 
 
