@@ -23,6 +23,7 @@ export function PerumdaDashboardPage({ user }: { readonly user: AuthenticatedUse
 
   const canWriteMills = hasPermission(user, 'mills.write');
   const canWriteFarmers = hasPermission(user, 'farmers.write');
+  const canReadVehicles = hasPermission(user, 'vehicles.read');
   const overview = overviewQuery.data?.data;
   const recon = reconQuery.data?.data;
 
@@ -107,13 +108,15 @@ export function PerumdaDashboardPage({ user }: { readonly user: AuthenticatedUse
             Master Petani & Kebun
           </Button>
         ) : null}
-        <Button
-          size="sm"
-          variant={activeTab === 'armada' ? 'primary' : 'outline'}
-          onClick={() => setActiveTab('armada')}
-        >
-          Armada & Supir
-        </Button>
+        {canReadVehicles ? (
+          <Button
+            size="sm"
+            variant={activeTab === 'armada' ? 'primary' : 'outline'}
+            onClick={() => setActiveTab('armada')}
+          >
+            Armada & Supir
+          </Button>
+        ) : null}
       </div>
 
       {activeTab === 'pks' ? (
