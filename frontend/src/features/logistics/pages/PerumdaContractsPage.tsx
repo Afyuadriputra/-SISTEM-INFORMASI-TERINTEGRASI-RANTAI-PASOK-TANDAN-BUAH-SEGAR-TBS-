@@ -4,8 +4,9 @@ import { Badge, Button, Input, Select } from '@/components/atoms';
 import { FormField, PolicyNoticeBanner, StatusIndicator } from '@/components/molecules';
 import { DataTable, FormSection, StateFeedbackCard } from '@/components/organisms';
 import { DataManagementTemplate } from '@/components/templates';
-import { useMills } from '@/features/master-data/api/masterDataApi';
+import { useCooperatives, useMillCompanies, useMills } from '@/features/master-data/api/masterDataApi';
 import { hasPermission, type AuthenticatedUser } from '@/lib/auth/permissions';
+import { isMockApiMode } from '@/lib/config/env';
 import { formatCalendarOrWibDate, formatKg, formatPricePerKg } from '@/lib/decimal/precision';
 import { ApiError } from '@/lib/errors/errorCatalog';
 import { useUiStore } from '@/lib/state/uiStore';
@@ -21,9 +22,13 @@ export function PerumdaContractsPage({ user }: { readonly user: AuthenticatedUse
   const pushToast = useUiStore((s) => s.pushToast);
   const canWrite = hasPermission(user, 'contracts.write');
   const canReserve = hasPermission(user, 'quotas.reserve');
+  const canReadMillCompanies =
+    hasPermission(user, 'mills.write') || user.roles.includes('DIRECTOR');
 
   const contractsQuery = useContracts();
   const millsQuery = useMills();
+  const millCompaniesQuery = useMillCompanies(canReadMillCompanies);
+  const coopsQuery = useCooperatives();
   const dosQuery = useDeliveryOrders();
 
   const createContract = useCreateContract();
@@ -31,6 +36,8 @@ export function PerumdaContractsPage({ user }: { readonly user: AuthenticatedUse
 
   const contracts = contractsQuery.data?.data ?? [];
   const mills = millsQuery.data?.data ?? [];
+  const millCompanies = millCompaniesQuery.data?.data ?? [];
+  const cooperatives = coopsQuery.data?.data ?? [];
   const deliveryOrders = dosQuery.data?.data ?? [];
 
   const [contractNum, setContractNum] = useState('');
@@ -58,6 +65,24 @@ export function PerumdaContractsPage({ user }: { readonly user: AuthenticatedUse
       setActionError('Nomor kontrak dan PKS mitra wajib diisi.');
       return;
     }
+    const millPartyId =
+      millCompanies.find((mc) => mc.id === chosenMill.mill_company_id)?.party_id ??
+      (isMockApiMode() ? '10000000-0000-4000-8000-000000000902' : '');
+    const existingPerumdaContract = contracts.find(
+      (c) => c.perumda_role === 'SELLER' || c.perumda_role === 'BUYER',
+    );
+    const perumdaPartyId =
+      existingPerumdaContract?.perumda_role === 'SELLER'
+        ? existingPerumdaContract.seller_party_id
+        : existingPerumdaContract?.perumda_role === 'BUYER'
+          ? existingPerumdaContract.buyer_party_id
+          : (isMockApiMode() ? '10000000-0000-4000-8000-000000000901' : '');
+    if (!millPartyId || !perumdaPartyId) {
+      setActionError('Data party Perumda/perusahaan PKS belum tersedia dari server.');
+      return;
+    }
+    const coopPartyId = cooperatives[0]?.party_id ?? perumdaPartyId;
+
     try {
       const res = await createContract.mutateAsync({
         contract_number: contractNum.trim(),
@@ -69,14 +94,14 @@ export function PerumdaContractsPage({ user }: { readonly user: AuthenticatedUse
         business_model_code: businessModel,
         perumda_role:
           businessModel === 'PRINCIPAL'
-            ? 'BUYER'
+            ? 'SELLER'
             : businessModel === 'AGENT'
               ? 'AGENT'
               : 'UNCONFIRMED',
-        seller_party_id: '10000000-0000-4000-8000-000000000901',
-        buyer_party_id: '10000000-0000-4000-8000-000000000902',
-        agent_party_id: null,
-        represented_party_id: null,
+        seller_party_id: businessModel === 'AGENT' ? coopPartyId : perumdaPartyId,
+        buyer_party_id: millPartyId,
+        agent_party_id: businessModel === 'AGENT' ? perumdaPartyId : null,
+        represented_party_id: businessModel === 'AGENT' ? coopPartyId : null,
         payment_terms: 'Pembayaran penuh sesuai faktur terverifikasi (SOP Pending)',
         initial_quota_kg: Number(initialQuotaKg || '50000').toFixed(3),
       });
