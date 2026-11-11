@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Button, Textarea } from '@/components/atoms';
 import { FormField } from '@/components/molecules';
 
@@ -33,6 +33,23 @@ function ConfirmDialogBody({
   const titleId = useId();
   const [reason, setReason] = useState('');
   const [reasonError, setReasonError] = useState<string | undefined>(undefined);
+  const cancelBtnWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const previousActive = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const raf = requestAnimationFrame(() => {
+      const target = requireReason
+        ? document.getElementById('confirm-dialog-reason')
+        : cancelBtnWrapperRef.current?.querySelector<HTMLElement>('button');
+      target?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      if (previousActive && document.contains(previousActive)) {
+        previousActive.focus();
+      }
+    };
+  }, [requireReason]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -86,7 +103,7 @@ function ConfirmDialogBody({
           </div>
         ) : null}
 
-        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <div ref={cancelBtnWrapperRef} className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" disabled={isSubmitting} onClick={onCancel}>
             {cancelLabel}
           </Button>
