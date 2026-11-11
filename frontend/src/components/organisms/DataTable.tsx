@@ -51,7 +51,12 @@ export function DataTable<TRow>({
   }
 
   return (
-    <div className="w-full overflow-x-auto rounded-lg border border-border-subtle bg-surface-default">
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label={caption}
+      className="w-full min-w-0 overflow-x-auto rounded-lg border border-border-subtle bg-surface-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-default"
+    >
       <table className="min-w-full border-collapse text-left text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead className="border-b border-border-subtle bg-surface-subtle/80 text-xs font-bold uppercase tracking-wide text-ink-secondary">
